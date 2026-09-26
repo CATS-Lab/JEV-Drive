@@ -2,7 +2,7 @@
 
 Each figure pairs **actual scene geometry on the left** with **the corresponding structured fields on the right**. Colors and labels identify the same objects in both panels. Click an image to inspect the full-resolution PNG.
 
-Figures 01–04 and 06 use the exact input state behind the selected `jev-diagnose-20260926-174329/bev/frame-00000.png`. Figure 05 uses a separate saved scene snapshot because the selected frame's cropped traffic-control arrays are empty. Values are rounded to 3 decimals in labels; the saved JSON retains full precision. These figures show state inputs, not model answers or a driving-quality evaluation.
+All six figures use **one offline snapshot at 0.2 seconds** from scene `clipgt-01330416-9f29-4799-86a6-c4b2f8593375`. It was selected for its 16 nearby actors with available velocity estimates, two stop lines and four signs. Values are rounded to 3 decimals in labels; the saved JSON retains full precision. No JEV API call was needed. The command context in Figure 06 is initialized from this snapshot using the implementation's `ControlState.initialize`; it is not a previous live decision.
 
 ## 01. Ego state
 
@@ -18,7 +18,7 @@ Blue highlights one retained lane; purple/orange highlight its left/right bounda
 
 ## 03. Nearby actors
 
-A1 points to the orange vehicle and its actual array entry. Other retained actors are shown with their source IDs. The selected actor's velocity is unavailable in this saved frame, so its relative velocity fields remain `null` and no velocity vector is drawn.
+A1 points to the orange vehicle and its actual array entry. Other retained actors are shown with their source IDs. The velocity arrow shows the selected actor's relative velocity multiplied by one second for display. It is a vector illustration, not a predicted trajectory; the label leader only identifies the box.
 
 ![Selected actor box and its structured fields](images/state-03-actors.png)
 
@@ -30,15 +30,15 @@ R0, R4, R8, R12 and R16 label actual indices in `route_segments[0]`. The blue cu
 
 ## 05. Stop lines and signs
 
-This separate real snapshot contains two stop-line segments and four signs. W1 selects one line; S1 selects one sign. The signs nearly overlap in top view but have different heights. The source category is preserved as recorded; the builder does not manufacture numeric regulatory values or lane associations.
+This same selected snapshot contains two stop-line segments and four signs. W1 selects one line; S1 selects one sign. The signs nearly overlap in top view but have different heights. The source category is preserved as recorded; the builder does not manufacture numeric regulatory values or lane associations.
 
 ![Stop lines and signs with their structured source fields](images/state-05-traffic.png)
 
-There are no retained signal objects in either illustrated crop. This is represented as `signals: []`, with signal-phase availability `unavailable`; an empty crop is not evidence that the entire world has no traffic lights. For a signal object without a current phase observation, the interface uses `phase: "unknown"`. No synthetic red/green signal has been added to these real-scene figures.
+There are no retained signal objects in this selected crop. This is represented as `signals: []`, with signal-phase availability `unavailable`; an empty crop is not evidence that the entire world has no traffic lights. For a signal object without a current phase observation, the interface uses `phase: "unknown"`. No synthetic red/green signal has been added to these real-scene figures.
 
 ## 06. Command context and constraints
 
-Measured ego speed, the previous target-speed command and the steering command are separate quantities. `JevModel` adds command state and `vehicle_constraints` before the client call. These fields describe how a decision can change the commands, not instantaneous guarantees about physical motion.
+Measured ego speed and command targets are separate quantities. This offline example initializes the target speed and steering from the snapshot using `ControlState.initialize`, then adds the same `vehicle_constraints` and timing fields that `JevModel` supplies before a client call. These fields describe how a decision can change the commands, not instantaneous guarantees about physical motion.
 
 ![Measured ego state alongside command state and vehicle constraints](images/state-06-control.png)
 
@@ -46,9 +46,8 @@ Measured ego speed, the previous target-speed command and the steering command a
 
 The small examples contain only structured scene state and basic scene metadata; they contain no credentials, API response, model weights or original USDZ archive.
 
-- [Driving frame state](examples/driving-state.json): source for Figures 01–04 and 06.
-- [Traffic-control snapshot](examples/traffic-state.json): source for Figure 05.
-- [Rendering script](../scripts/render-state-guide.py): draws directly from those JSON files using NumPy and Matplotlib. It requires no simulator, network access or JEV provider.
+- [Selected snapshot and initialized command context](examples/driving-state.json): source for all six figures.
+- [Rendering script](../scripts/render-state-guide.py): draws directly from that JSON file using NumPy and Matplotlib. It requires no simulator, network access or JEV provider.
 
 From an environment with the project dependencies installed:
 

@@ -21,12 +21,11 @@ AlpaSim source tree is obtained separately and is not vendored in this repositor
 
 ## Scene examples and derived figures
 
-`docs/examples/driving-state.json` and Figures 01–04/06 in `docs/images/` derive
-from a locally available AlpaSim scene, internal ID
-`clipgt-07054c19-f27f-42cc-8413-35e05c924d06`.
-`docs/examples/traffic-state.json` and Figure 05 derive from the separate source
-scene identified in that JSON file. They contain extracted structured facts and
-visualizations, not original USDZ archives.
+`docs/examples/driving-state.json` and all six figures in `docs/images/` derive
+from an offline snapshot at 0.2 seconds in the locally available AlpaSim scene
+`clipgt-01330416-9f29-4799-86a6-c4b2f8593375`. They contain extracted structured
+facts, initialized command context and visualizations, not original USDZ archives
+or a live JEV model response.
 
 Underlying scene data and any rights in derived examples remain subject to the
 original dataset's license and access terms. This repository does not grant MIT

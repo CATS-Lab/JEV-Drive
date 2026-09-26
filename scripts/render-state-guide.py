@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/images"
 OUT.mkdir(parents=True, exist_ok=True)
 MAIN = json.loads((ROOT / "docs/examples/driving-state.json").read_text())["state"]
-TRAFFIC = json.loads((ROOT / "docs/examples/traffic-state.json").read_text())["state"]
 GREEN, BLUE, ORANGE, PURPLE = "#087f5b", "#1864ab", "#d9480f", "#862e9c"
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 11})
 
@@ -131,7 +130,7 @@ def ego():
     fig, ax, tx = base(
         s,
         "01 / Ego: physical state and body geometry",
-        "Real frame | green rectangle = ego box | black cross = rig origin",
+        "Selected snapshot | green rectangle = ego box | black cross = rig origin",
         (-5, 5),
         (-4, 8),
     )
@@ -306,7 +305,7 @@ def actors():
         tx,
         "A1 → state.actors[0]",
         a,
-        "Positions use the ego rig frame; heading is relative to ego.\nThis actor has unavailable velocity: no velocity arrow is drawn.\nThe line labeled A1 only identifies its box.\nUnknown velocity is null, not zero.\nActor selection: ROI first, then nearest K (default 16).",
+        "Positions use the ego rig frame; heading is relative to ego.\nArrow = relative velocity x 1 second, not a forecast.\nThe label leader only identifies its box.\nUnknown velocity is null, not zero.\nActor selection: ROI first, then nearest K (default 16).",
     )
     save(fig, "state-03-actors.png")
 
@@ -359,16 +358,16 @@ def navigation():
 
 
 def traffic():
-    s = TRAFFIC
+    s = MAIN
     t = s["traffic_controls"]
     w = t["stop_lines"][1]
     sign = t["signs"][0]
     fig, ax, tx = base(
         s,
         "05 / Traffic controls: observed map facts",
-        "Separate real scene snapshot | orange = stop lines | purple = signs",
+        "Same selected snapshot | orange = stop lines | purple = signs",
         (-5, 20),
-        (-23, 8),
+        (-12, 14),
     )
     for item in t["stop_lines"]:
         for piece in item["segments"]:
@@ -432,7 +431,7 @@ def commands():
     fig, ax, tx = base(
         s,
         "06 / Control context: measured motion versus commands",
-        "Same real frame | this panel does not show a model response",
+        "Same offline snapshot | initialized commands, not a model response",
         (-5, 5),
         (-4, 8),
     )
@@ -448,9 +447,9 @@ def commands():
     }
     panel(
         tx,
-        "Extra context attached before a JEV decision",
+        "Initialized context for this offline snapshot",
         obj,
-        "Actual speed and target speed are separate quantities.\nAt dt = 0.2 s, rate bounds allow at most 0.6 m/s\nand 0.16 rad change per decision, before absolute bounds.\nConstraints bound commands, not instantaneous actual motion.\nThe observed speed can exceed the configured target bound.",
+        "Commands shown here are initialized from ego kinematics.\nAt dt = 0.2 s, rate bounds allow at most 0.6 m/s\nand 0.16 rad change per decision, before absolute bounds.\nConstraints bound commands, not instantaneous actual motion.\nNo JEV decision or historical command is implied.",
     )
     save(fig, "state-06-control.png")
 
