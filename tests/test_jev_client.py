@@ -4,13 +4,18 @@ from copy import deepcopy
 import json
 import httpx
 import pytest
-from jev_drive.config import Config
+from jev_drive.config import Config as BaseConfig
 from jev_drive.logging.decision_log import DecisionLog
-from jev_drive.policy.jev_client import JevAPIError, JevClient
+from jev_drive.policy.http_client import JevAPIError
+from jev_drive.policy.vercel_client import VercelJevClient as JevClient
 from jev_drive.policy.jev_model import JevModel
 from jev_drive.policy.questions import build
 from jev_drive.state.state_builder import JevStateBuilder
 from test_core import score_response, snapshot
+
+
+def Config(**kwargs):
+    return BaseConfig(backend="vercel", **kwargs)
 
 
 def gateway_response(mode):

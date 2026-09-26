@@ -9,8 +9,9 @@ from pathlib import Path
 @dataclass(frozen=True)
 class Config:
     mode: str = "score"
-    model: str = "typesafe-ai/jev"
-    endpoint: str = "https://ai-gateway.vercel.sh/v1/evaluate"
+    backend: str = "typesafe"
+    model: str | None = None
+    endpoint: str | None = None
     api_timeout_s: float = 120.0
     retry_429: bool = False
     retry_initial_s: float = 5.0
@@ -50,6 +51,21 @@ class Config:
     )
 
     def __post_init__(self):
+        defaults = {
+            "typesafe": ("jev-latest", "https://api.typesafe.ai/v1/systemone"),
+            "vercel": ("typesafe-ai/jev", "https://ai-gateway.vercel.sh/v1/evaluate"),
+        }
+        if self.backend not in defaults:
+            raise ValueError("backend must be typesafe or vercel")
+        model, endpoint = defaults[self.backend]
+        if self.model is None:
+            object.__setattr__(self, "model", model)
+        if self.endpoint is None:
+            object.__setattr__(self, "endpoint", endpoint)
+        if self.endpoint != endpoint:
+            raise ValueError("endpoint must match the selected backend")
+        if not isinstance(self.model, str) or not self.model.strip():
+            raise ValueError("model must be a nonempty string")
         if self.mode not in {"score", "choice"}:
             raise ValueError("mode must be score or choice")
         for name in (

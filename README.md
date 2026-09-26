@@ -1,6 +1,6 @@
 # JEV-Drive
 
-A research interface connecting **structured AlpaSim scene state → JEV decisions → AlpaSim vehicle motion**. JEV chooses incremental target-speed and steering commands; AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory. The JEV client is replaceable; the bundled transport currently uses Vercel AI Gateway (`typesafe-ai/jev`). It does not use the Alpamayo driving model.
+A research interface connecting **structured AlpaSim scene state → JEV decisions → AlpaSim vehicle motion**. JEV chooses incremental target-speed and steering commands; AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory. The default client calls the official TypeSafe JEV API (`jev-latest`). It does not use the Alpamayo driving model.
 
 This repository contains the integration code, modular state builders, configuration, tests, and a small AlpaSim runtime patch. Small structured-state examples and derived BEV figures are included for documentation. Full scene datasets, model weights, API credentials, experiment outputs, and the AlpaSim source tree are not included.
 
@@ -24,7 +24,7 @@ AlpaSim PolicyEvent
 | State builders | `src/jev_drive/state/` | Separate modules for ego, roads, actors, lane matching, navigation, signals, stop lines, signs and vehicle constraints |
 | Driver service | `src/jev_drive/integration/driver_service.py` | AlpaSim `EgodriverService` gRPC interface |
 | Policy | `src/jev_drive/policy/jev_model.py` | Per-session decision state and response interpretation |
-| Replaceable backend | `src/jev_drive/policy/jev_client.py` | Vercel authentication, evaluation requests, validation and retries |
+| Official JEV client | `src/jev_drive/policy/jev_client.py` | TypeSafe JEV API using `TYPESAFE_API_KEY` |
 | Control conversion | `src/jev_drive/control/` | Score/Choice mapping, rate limits and trajectory generation |
 
 The transport has `kind=jev.scene_snapshot`, `schema_version=1`, session and simulation timestamps, and an ego-local frame (+x forward, +y left, +z up). Original renderer bytes are preserved separately, not sent to JEV. A replacement backend implements `async decide(state, questions)`; see the existing client and model for the response contract. The CLI also calls `async close()` on the client.
@@ -85,20 +85,18 @@ scripts/jev-drive rebuild-state \
   --output outputs/snapshot/rebuilt-state.json
 ```
 
-### Run with the bundled client
+### Run with the official JEV API
 
-The commands below use the bundled Vercel adapter. Vercel is not required by the state builders, controller or `JevModel`; to use another JEV service, implement the same client contract and replace client construction in `cli.py`. Merely changing the endpoint is insufficient if authentication or response schemas differ. See [the client boundary](docs/full-workflow.md#replaceable-jev-client).
-
-For this bundled adapter, set `AI_GATEWAY_API_KEY` in the same shell. An interactive Bash prompt avoids putting the key in command history:
+Obtain a key from TypeSafe and export `TYPESAFE_API_KEY` in the shell that launches the driver. The default model is `jev-latest`, and the endpoint is `https://api.typesafe.ai/v1/systemone`, following the [official quick start](https://docs.typesafe.ai/introduction/quickstart).
 
 ```bash
-read -rsp 'Vercel AI Gateway key: ' AI_GATEWAY_API_KEY; echo
-export AI_GATEWAY_API_KEY
+read -rsp 'TypeSafe JEV API key: ' TYPESAFE_API_KEY; echo
+export TYPESAFE_API_KEY
 scripts/jev-drive --config configs/default.json native-simulate \
   --artifact "$JEV_ARTIFACT" --steps 5 --output outputs/first-run
 ```
 
-This sends the cropped structured scene state to `https://ai-gateway.vercel.sh/v1/evaluate` and consumes the Vercel account's quota. Credentials are read only from `AI_GATEWAY_API_KEY`. Use a fresh output directory for each run.
+The client sends `{model, state, questions}` with bearer authentication and reads typed results from `answers`. Use a fresh output directory for each run. `JevModel` depends only on `async decide(state, questions)`, so authentication and transport stay separate from scene builders and control logic.
 
 | Config | Behavior |
 |---|---|
@@ -115,7 +113,7 @@ scripts/jev-drive --config configs/full-scene.json native-simulate \
 
 The step count is explicit, not automatically inferred for arbitrary scenes. The 4-second reference trajectory horizon is not the scene duration.
 
-Transport-specific retry behavior is documented in the [bundled adapter notes](docs/bundled-adapter.md).
+All three configs above use the official JEV API. The [local development adapter](docs/local-development.md) is opt-in and is not a prerequisite for users.
 
 To keep a run alive across SSH disconnection, enter a tmux session **from the configured shell**, then run the simulation command above:
 

@@ -43,12 +43,12 @@ async def execute(args):
             )
         )
         return
-    from .policy.jev_client import JevClient
+    from .policy.client_factory import create_client
 
     from .logging.decision_log import DecisionLog
 
     api_log = DecisionLog(args.output)
-    client = JevClient(config, on_event=api_log.write)
+    client = create_client(config, on_event=api_log.write)
     try:
         if args.command in {"simulate", "native-simulate"}:
             from .integration.local_simulation import run

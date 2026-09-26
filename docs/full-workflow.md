@@ -1,6 +1,6 @@
 # Complete implementation workflow
 
-The implemented `native-simulate` path connects AlpaSim scene state to a **replaceable JEV client**, then executes the resulting reference through AlpaSim's MPC and vehicle dynamics. The data and control interfaces do not require a particular JEV service provider. The bundled CLI currently creates a Vercel adapter; that is one transport implementation behind the client boundary.
+The implemented `native-simulate` path connects AlpaSim scene state to a **replaceable JEV client**, then executes the resulting reference through AlpaSim's MPC and vehicle dynamics. The data and control interfaces do not require a particular JEV service provider. The CLI defaults to the official TypeSafe JEV API; alternate clients are selected explicitly through the client factory.
 
 ## End-to-end flow
 
@@ -79,9 +79,9 @@ model = JevModel(config, client, logger)
 response = await client.decide(state, questions)
 ```
 
-A replacement implements `async decide(state, questions)` and returns the answer mapping expected by [Score](../src/jev_drive/control/score_control.py) or [Choice](../src/jev_drive/control/choice_control.py) conversion. Inspect [the existing client](../src/jev_drive/policy/jev_client.py) and [client tests](../tests/test_jev_client.py) for the current response contract. The CLI additionally calls `async close()`.
+A replacement implements `async decide(state, questions)` and returns the answer mapping expected by [Score](../src/jev_drive/control/score_control.py) or [Choice](../src/jev_drive/control/choice_control.py) conversion. Inspect [the existing client](../src/jev_drive/policy/jev_client.py) and [client tests](../tests/test_jev_client.py) for the current response contract. The CLI additionally calls `async close()`. The official client reads `TYPESAFE_API_KEY` and calls `https://api.typesafe.ai/v1/systemone` with model `jev-latest`.
 
-To use another service, implement its authentication/request/response translation and replace client construction in [cli.py](../src/jev_drive/cli.py). Scene builders, state transport, control mapping and AlpaSim integration do not need to change. Merely editing the endpoint does not adapt incompatible credentials or response formats. Provider-specific retries belong inside the client, not in the scene representation; optional details for the current adapter are in [bundled adapter notes](bundled-adapter.md).
+The factory in [client_factory.py](../src/jev_drive/policy/client_factory.py) selects `JevClient` for the default `backend: "typesafe"`. To add another service, implement its authentication/request/response translation and register its client and configuration defaults. Scene builders, control mapping and AlpaSim integration do not change. Provider selection never depends on which API keys happen to be exported, and no automatic provider fallback occurs. See [local development](local-development.md) for the explicitly selected development adapter.
 
 ## Code map
 
@@ -93,7 +93,7 @@ To use another service, implement its authentication/request/response translatio
 | State builders and schema | [state/](../src/jev_drive/state/) |
 | gRPC driver and coordinate conversion | [driver_service.py](../src/jev_drive/integration/driver_service.py) |
 | Policy and questions | [jev_model.py](../src/jev_drive/policy/jev_model.py), [questions.py](../src/jev_drive/policy/questions.py) |
-| Replaceable transport | [jev_client.py](../src/jev_drive/policy/jev_client.py) |
+| Official client and provider selection | [jev_client.py](../src/jev_drive/policy/jev_client.py), [client_factory.py](../src/jev_drive/policy/client_factory.py) |
 | Command mapping and reference trajectory | [control/](../src/jev_drive/control/) |
 | Output logging and BEV | [decision_log.py](../src/jev_drive/logging/decision_log.py), [bev.py](../src/jev_drive/visualization/bev.py) |
 
