@@ -2,6 +2,8 @@
 
 These diagrams follow the current Python builders. All numbers and IDs below are **illustrative**, not measurements from a recorded scene. JSON snippets show selected fields, not complete requests. GitHub renders the Mermaid diagrams directly.
 
+For the full simulation lifecycle, see the [complete implementation workflow](full-workflow.md).
+
 ## 1. From the simulator to JEV
 
 ```mermaid
