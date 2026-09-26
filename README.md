@@ -29,6 +29,10 @@ AlpaSim PolicyEvent
 
 The transport has `kind=jev.scene_snapshot`, `schema_version=1`, session and simulation timestamps, and an ego-local frame (+x forward, +y left, +z up). Original renderer bytes are preserved separately, not sent to JEV. A replacement backend implements `async decide(state, questions)`; see the existing client and model for the response contract. The CLI also calls `async close()` on the client.
 
+## Visual guide to structured inputs
+
+See [Structured state: a visual guide](docs/structured-state.md) for diagrams of ego state, road geometry, actors, navigation, traffic controls and command constraints, with small JSON examples and links to each builder.
+
 ## Installation
 
 Use Linux and **Python 3.12**. State construction and mocked API tests can run without AlpaSim:
