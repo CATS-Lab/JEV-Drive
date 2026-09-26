@@ -1,146 +1,102 @@
 # Complete implementation workflow
 
-This diagram describes the implemented **`native-simulate`** path with `configs/full-scene.json`: real JEV via Vercel AI Gateway, the native AlpaSim event loop, local gRPC services and recorded traffic. It is a code-path diagram, not a claim that a full live JEV scene has completed successfully.
+The implemented `native-simulate` path connects AlpaSim scene state to a **replaceable JEV client**, then executes the resulting reference through AlpaSim's MPC and vehicle dynamics. The data and control interfaces do not require a particular JEV service provider. The bundled CLI currently creates a Vercel adapter; that is one transport implementation behind the client boundary.
 
 ## End-to-end flow
 
 ```mermaid
 flowchart TD
-    START["Launch native-simulate<br/>config + USDZ artifact + requested steps + new output directory"]
-
-    subgraph SETUP["1. Startup and simulation setup"]
-        CFG["Load Config; create JevClient<br/>read AI_GATEWAY_API_KEY from environment"]
-        CHECK["Check patched AlpaSim runtime<br/>validate step count and output directory"]
-        SCENE["Load USDZ and internal scene ID<br/>save jev-config.json + scene-manifest.json"]
-        SERVER["Start local JEV driver and MPC/controller gRPC servers<br/>create JevModel and per-session state"]
-        LOOP["Create EventBasedRollout<br/>recorded traffic; recorded route; no cameras<br/>ground-contact correction and evaluator disabled"]
-        WARM["One recorded-motion warmup step<br/>0.2 s by default; skip JEV during warmup"]
-        CFG --> CHECK --> SCENE --> SERVER --> LOOP --> WARM
+    START["Start native-simulate<br/>configuration + scene artifact + requested steps + output path"]
+    subgraph SETUP["1. Initialize"]
+        CFG["Load configuration and configured client implementation"]
+        CHECK["Check runtime patch and output path<br/>load scene artifact and internal scene ID"]
+        SERVER["Start local JEV driver and MPC/controller services<br/>create session and event loop"]
+        WARM["Recorded-motion warmup<br/>one 0.2-second step by default; no JEV decision"]
+        CFG --> CHECK --> SERVER --> WARM
     end
     START --> CFG
-
-    subgraph INPUT["2. Build one decision input at simulation time t"]
-        POLICY["AlpaSim PolicyEvent<br/>JEV_DRIVE_ENABLED runtime hook"]
-        SNAP["AlpasimAdapter.from_runtime<br/>current ego/actors + past motion + map + route<br/>optional past/current signal annotations"]
-        BUILD["Independent builders<br/>ego, road, actors, navigation, traffic_controls<br/>ego-frame transform, ROI crop and availability fields"]
-        WIRE["Versioned JSON envelope<br/>DriveRequest.renderer_data"]
-        RPC["Driver receives current egomotion + drive RPC<br/>check session, schema, frame and timestamps"]
-        MODEL["JevModel validates ordering and decision interval<br/>initialize or reuse command state"]
-        ENRICH["Add previous target speed and steering command<br/>vehicle limits, timestamp, interval and coordinate frame"]
-        POLICY --> SNAP --> BUILD --> WIRE --> RPC --> MODEL --> ENRICH
+    subgraph STATE["2. Construct structured input"]
+        CURRENT["AlpaSim current ego and actor state<br/>map, route and available traffic-control facts"]
+        SNAP["Runtime hook → AlpasimAdapter → SceneSnapshot"]
+        BUILD["Independent builders<br/>ego / road / actors / navigation / traffic_controls"]
+        WIRE["Versioned envelope in DriveRequest.renderer_data<br/>validate session, timestamps, frame and schema"]
+        CONTEXT["JevModel adds command state<br/>vehicle constraints and decision timing"]
+        CURRENT --> SNAP --> BUILD --> WIRE --> CONTEXT
     end
-    WARM --> POLICY
-
-    subgraph API["3. JEV request and waiting"]
-        REQUEST["JevClient: pace request starts<br/>POST Vercel /v1/evaluate<br/>model: typesafe-ai/jev<br/>state + speed/steering questions"]
-        STATUS{"Request result?"}
-        RETRY{"HTTP 429 retry enabled?"}
-        WAIT["Log api_retry; wait Retry-After if valid<br/>otherwise 5, 10, 20, 40, then 60 s<br/>same frozen request; no simulation advance"]
-        VALID["Validate response and answers<br/>required keys, finite values, ranges and probabilities"]
-        OK{"Valid?"}
-        REQUEST --> STATUS
-        STATUS -->|"HTTP 429"| RETRY
-        RETRY -->|Yes| WAIT
-        WAIT --> REQUEST
-        STATUS -->|"HTTP 200"| VALID
-        VALID --> OK
+    WARM --> CURRENT
+    subgraph POLICY["3. Request a JEV decision"]
+        CLIENT["Client contract: async decide(state, questions)<br/>provider-specific transport stays behind this boundary"]
+        ANSWER["Validate returned speed and steering answers<br/>finite values, ranges and probabilities"]
+        VALID{"Valid decision?"}
+        CLIENT --> ANSWER --> VALID
     end
-    ENRICH --> REQUEST
-
-    subgraph CONTROL["4. Convert the decision and simulate motion"]
-        MAP["Map Score or Choice answer to<br/>target-speed and steering increments"]
-        LIMIT["Apply rate bounds, then absolute bounds<br/>default speed change at most 0.6 m/s per decision<br/>steering change at most 0.16 rad per decision"]
-        TRAJ["Generate ego-local reference trajectory<br/>default horizon 4 s, sampled at 10 Hz"]
-        DECISION["Write decision event; update session command state<br/>cache result for an identical duplicate request"]
-        WORLD["Driver converts trajectory to world poses<br/>prepend current pose; return DriveResponse"]
-        MPC["AlpaSim controller RPC<br/>MPC + vehicle dynamics execute the next interval"]
-        STEP["Runtime traffic and step events<br/>advance ego and recorded actors by 0.2 s"]
-        MORE{"More scheduled steps?"}
-        MAP --> LIMIT --> TRAJ --> DECISION --> WORLD --> MPC --> STEP --> MORE
+    CONTEXT --> CLIENT
+    subgraph ACTION["4. Execute bounded control"]
+        MAP["Score / Choice mapping<br/>speed and steering increments"]
+        LIMIT["Rate limits, then absolute bounds<br/>default speed increment at most 0.6 m/s per step"]
+        REF["Build reference trajectory<br/>default horizon 4 s, sampled at 10 Hz"]
+        SAVE["Log decision; update command state<br/>cache identical duplicate requests"]
+        RPC["Convert reference from ego to world frame<br/>return trajectory through driver gRPC"]
+        MPC["AlpaSim MPC and vehicle dynamics<br/>execute the next 0.2-second interval"]
+        STEP["Update actual ego motion and recorded traffic"]
+        MORE{"More steps?"}
+        MAP --> LIMIT --> REF --> SAVE --> RPC --> MPC --> STEP --> MORE
     end
-    OK -->|Yes| MAP
-    MORE -->|Yes| POLICY
-
-    subgraph OUTPUT["5. Completion, errors and artifacts"]
-        LIVE["During rollout<br/>decisions.jsonl: decisions, retries, outcomes, failures<br/>controller CSV + native rollout.asl"]
-        COUNT{"Event loop returned and<br/>completed decisions = requested steps?"}
-        PASS["Mark summary success = true"]
-        FAIL["Terminate this rollout<br/>retain available failure details<br/>no alternative policy or automatic rollout restart"]
-        CLEAN["Rollout finalization<br/>write summary.json and completed count<br/>stop local servers; restore runtime environment"]
-        RETURN{"Native run returned successfully?"}
-        BEV["CLI prints summary and exports<br/>BEV PNG frames, frames.json and rollout.gif"]
-        END["CLI closes JEV HTTP client<br/>process ends; tmux shell can remain open"]
-        COUNT -->|Yes| PASS --> CLEAN
+    VALID -->|Yes| MAP
+    MORE -->|Yes| CURRENT
+    subgraph RESULTS["5. Results and cleanup"]
+        LOG["During rollout: structured inputs, decisions and outcomes<br/>decisions.jsonl + controller CSV + native rollout logs"]
+        COUNT{"Completed requested decision count?"}
+        SUCCESS["Mark rollout successful"]
+        FAIL["Stop rollout on terminal error<br/>retain available diagnostics; no substitute driving policy"]
+        FINAL["Write summary and completed count<br/>stop services; restore environment"]
+        EXPORT["On successful return: export BEV frames and GIF<br/>close client when CLI exits"]
+        COUNT -->|Yes| SUCCESS --> FINAL
         COUNT -->|No| FAIL
-        FAIL --> CLEAN
-        CLEAN --> RETURN
-        RETURN -->|Yes| BEV --> END
-        RETURN -->|No| END
+        FAIL --> FINAL
+        FINAL --> EXPORT
     end
     MORE -->|No| COUNT
-    STATUS -->|"Other HTTP / transport error"| FAIL
-    RETRY -->|No| FAIL
-    OK -->|No| FAIL
-    RPC -. "validation failure" .-> FAIL
-    MODEL -. "conflicting or out-of-order input" .-> FAIL
+    VALID -->|No| FAIL
+    CLIENT -. "terminal client error" .-> FAIL
+    WIRE -. "invalid input" .-> FAIL
     MPC -. "simulation error" .-> FAIL
-    WAIT -. "retry record" .-> LIVE
-    DECISION -. "decision record" .-> LIVE
-    MPC -. "actual motion outcomes" .-> LIVE
-    STEP -. "native runtime logs" .-> LIVE
+    SAVE -.-> LOG
+    STEP -.-> LOG
 ```
 
-Solid arrows show the normal control flow and explicit error branches. Dotted arrows show logging or selected exceptional paths. Initialization errors stop before the loop; the rollout `summary.json` finalizer exists only once setup has reached the guarded rollout section. Cancellation also stops the run; it does not resume it automatically.
+The next cycle observes actual simulator motion, rather than assuming the reference was followed exactly. The 4-second trajectory is regenerated every decision; only the next control interval is executed before the next observation. The currently configured 20-second recording uses a 0.2-second warmup and 99 decisions. Other recordings require an appropriate step count.
 
-## How to read one cycle
+Errors during initialization can occur before the rollout summary finalizer is established. After the guarded rollout begins, finalization writes the completion summary. Failed runs keep available logs but do not automatically export the success-path BEV/GIF.
 
-1. **Observe:** use the current simulator state and past motion. Static map and route intent can extend ahead; future actor motion and future signal phases are excluded from the policy input.
-2. **Structure:** builders convert source geometry into ego-relative facts. The runtime sends a versioned envelope through the existing gRPC request field; no new protobuf field is required.
-3. **Decide:** JEV receives the structured state and both control questions in one HTTP request. Only `policy/jev_client.py` owns the Vercel transport logic.
-4. **Wait if needed:** a 429 retry repeats the same state and questions. The current decision waits; it does not apply another control increment or advance simulation time. A valid `Retry-After` may exceed the fallback 60-second cap. Other errors remain fatal.
-5. **Act:** interpret the valid answer, bound the control changes, and create a reference trajectory. AlpaSim's MPC and dynamics produce the actual motion; JEV does not directly set the next vehicle pose.
-6. **Repeat:** the next policy call observes the resulting state. An identical same-timestamp request can return its cached result without another JEV call; conflicting/stale requests fail.
+## Replaceable JEV client
 
-## Simulation time versus wall-clock time
+`JevModel` receives a client object rather than implementing provider authentication or HTTP calls itself:
 
-```mermaid
-sequenceDiagram
-    participant R as AlpaSim runtime
-    participant D as JEV driver
-    participant G as Vercel JEV
-    participant C as MPC / dynamics
-    R->>D: Current state at t; query next interval
-    D->>G: State at t + control questions
-    G-->>D: HTTP 429
-    Note over R,D: Simulation step waits at t
-    Note over D,G: Wait Retry-After or exponential backoff
-    D->>G: Same state at t + same questions
-    G-->>D: Valid decision
-    D->>D: Apply one bounded command update
-    D-->>R: Reference trajectory, horizon 4 s
-    R->>C: Execute next control interval
-    C-->>R: Actual ego motion
-    R->>R: Update traffic / step state
-    Note over R,C: Next policy observation at t + 0.2 s
+```python
+model = JevModel(config, client, logger)
+# Internally:
+response = await client.decide(state, questions)
 ```
 
-For the currently configured 20-second recording, the run consists of **0.2 seconds of warmup + 99 × 0.2 seconds of closed-loop simulation**. Wall-clock duration can be much longer because API calls and retries take real time. The 4-second reference is regenerated each decision; it is not executed for 4 seconds before asking JEV again. Default and Choice configurations fail immediately on 429; the full-scene configuration enables the waiting branch shown above.
+A replacement implements `async decide(state, questions)` and returns the answer mapping expected by [Score](../src/jev_drive/control/score_control.py) or [Choice](../src/jev_drive/control/choice_control.py) conversion. Inspect [the existing client](../src/jev_drive/policy/jev_client.py) and [client tests](../tests/test_jev_client.py) for the current response contract. The CLI additionally calls `async close()`.
+
+To use another service, implement its authentication/request/response translation and replace client construction in [cli.py](../src/jev_drive/cli.py). Scene builders, state transport, control mapping and AlpaSim integration do not need to change. Merely editing the endpoint does not adapt incompatible credentials or response formats. Provider-specific retries belong inside the client, not in the scene representation; optional details for the current adapter are in [bundled adapter notes](bundled-adapter.md).
 
 ## Code map
 
 | Stage | Implementation |
 |---|---|
-| CLI, configuration and client lifecycle | [cli.py](../src/jev_drive/cli.py), [config.py](../src/jev_drive/config.py) |
+| CLI and client construction | [cli.py](../src/jev_drive/cli.py) |
 | Native services, warmup and rollout lifecycle | [native_simulation.py](../src/jev_drive/integration/native_simulation.py) |
-| Runtime hook and snapshot construction | [AlpaSim patch](../patches/alpasim-jev-runtime.patch), [runtime_bridge.py](../src/jev_drive/integration/runtime_bridge.py), [alpasim_adapter.py](../src/jev_drive/integration/alpasim_adapter.py) |
-| Input assembly and transport validation | [state_builder.py](../src/jev_drive/state/state_builder.py), [schema.py](../src/jev_drive/state/schema.py) |
-| gRPC boundary and trajectory coordinates | [driver_service.py](../src/jev_drive/integration/driver_service.py) |
-| Policy and command state | [jev_model.py](../src/jev_drive/policy/jev_model.py), [questions.py](../src/jev_drive/policy/questions.py) |
-| Vercel request and retry policy | [jev_client.py](../src/jev_drive/policy/jev_client.py), [retry.py](../src/jev_drive/policy/retry.py) |
-| Score/Choice conversion and constraints | [control/](../src/jev_drive/control/) |
-| Reference trajectory | [trajectory.py](../src/jev_drive/control/trajectory.py) |
-| Decision logs and BEV export | [decision_log.py](../src/jev_drive/logging/decision_log.py), [bev.py](../src/jev_drive/visualization/bev.py) |
+| Runtime bridge and simulator adapter | [runtime_bridge.py](../src/jev_drive/integration/runtime_bridge.py), [alpasim_adapter.py](../src/jev_drive/integration/alpasim_adapter.py) |
+| State builders and schema | [state/](../src/jev_drive/state/) |
+| gRPC driver and coordinate conversion | [driver_service.py](../src/jev_drive/integration/driver_service.py) |
+| Policy and questions | [jev_model.py](../src/jev_drive/policy/jev_model.py), [questions.py](../src/jev_drive/policy/questions.py) |
+| Replaceable transport | [jev_client.py](../src/jev_drive/policy/jev_client.py) |
+| Command mapping and reference trajectory | [control/](../src/jev_drive/control/) |
+| Output logging and BEV | [decision_log.py](../src/jev_drive/logging/decision_log.py), [bev.py](../src/jev_drive/visualization/bev.py) |
 
-For individual fields and their meaning, see the [structured-state visual guide](structured-state.md).
+See the [real-scene BEV field guide](bev-state-guide.md) to match visible scene elements to structured values.
 
-`success: true` means the requested simulation completed; it is not a collision-free or traffic-rule compliance result. This implementation uses privileged structured inputs and recorded, nonreactive traffic, with rendering and ground-contact correction disabled. The smaller `simulate` harness and the independently hosted `serve` mode are alternative entry points; the diagram above specifically describes `native-simulate`.
+This native launcher uses privileged structured inputs and recorded, nonreactive traffic, with rendering and ground-contact correction disabled. Successful completion does not establish collision-free or rule-compliant driving. The `simulate` harness and independent `serve` mode are alternative entry points; the diagram above describes `native-simulate`.

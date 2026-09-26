@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jev-drive"
 version = "0.1.0"
+license = {text = "MIT"}
 description = "Structured-state JEV driving experiments with AlpaSim"
 requires-python = ">=3.12,<3.13"
 dependencies = ["numpy", "scipy", "shapely>=2", "httpx", "matplotlib", "imageio", "pyarrow", "grpcio", "protobuf"]

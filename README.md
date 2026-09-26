@@ -1,8 +1,8 @@
 # JEV-Drive
 
-A research interface connecting **structured AlpaSim scene state → JEV decisions → AlpaSim vehicle motion**. JEV chooses incremental target-speed and steering commands; AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory. This implementation uses JEV through Vercel AI Gateway (`typesafe-ai/jev`). It does not use the Alpamayo driving model.
+A research interface connecting **structured AlpaSim scene state → JEV decisions → AlpaSim vehicle motion**. JEV chooses incremental target-speed and steering commands; AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory. The JEV client is replaceable; the bundled transport currently uses Vercel AI Gateway (`typesafe-ai/jev`). It does not use the Alpamayo driving model.
 
-This repository contains the integration code, modular state builders, configuration, tests, and a small AlpaSim runtime patch. Scene datasets, model weights, API credentials, experiment outputs, and the AlpaSim source tree are not included.
+This repository contains the integration code, modular state builders, configuration, tests, and a small AlpaSim runtime patch. Small structured-state examples and derived BEV figures are included for documentation. Full scene datasets, model weights, API credentials, experiment outputs, and the AlpaSim source tree are not included.
 
 ## Architecture
 
@@ -11,7 +11,7 @@ AlpaSim PolicyEvent
   → runtime_bridge + AlpasimAdapter
   → SceneSnapshot → independent state builders
   → versioned JSON in DriveRequest.renderer_data
-  → JEV gRPC driver → JevModel → JevClient (Vercel)
+  → JEV gRPC driver → JevModel → replaceable JEV client
   → bounded speed/steering increments → reference trajectory
   → AlpaSim MPC + vehicle dynamics → next scene state
 ```
@@ -31,9 +31,11 @@ The transport has `kind=jev.scene_snapshot`, `schema_version=1`, session and sim
 
 ## Complete workflow
 
-See the [end-to-end implementation flowchart](docs/full-workflow.md) for startup, runtime state transport, JEV decisions, HTTP 429 retries, MPC execution, loop completion and saved outputs. A sequence diagram also separates simulation time from API waiting time.
+See the [end-to-end implementation flowchart](docs/full-workflow.md) for startup, structured state, JEV decisions, MPC execution and saved outputs. The workflow does not require a particular JEV service provider.
 
 ## Visual guide to structured inputs
+
+Start with the [real-scene BEV field guide](docs/bev-state-guide.md): each figure places an annotated scene beside its actual structured fields.
 
 See [Structured state: a visual guide](docs/structured-state.md) for diagrams of ego state, road geometry, actors, navigation, traffic controls and command constraints, with small JSON examples and links to each builder.
 
@@ -83,7 +85,11 @@ scripts/jev-drive rebuild-state \
   --output outputs/snapshot/rebuilt-state.json
 ```
 
-For a real JEV rollout, set `AI_GATEWAY_API_KEY` in the same shell. An interactive Bash prompt avoids putting the key in command history:
+### Run with the bundled client
+
+The commands below use the bundled Vercel adapter. Vercel is not required by the state builders, controller or `JevModel`; to use another JEV service, implement the same client contract and replace client construction in `cli.py`. Merely changing the endpoint is insufficient if authentication or response schemas differ. See [the client boundary](docs/full-workflow.md#replaceable-jev-client).
+
+For this bundled adapter, set `AI_GATEWAY_API_KEY` in the same shell. An interactive Bash prompt avoids putting the key in command history:
 
 ```bash
 read -rsp 'Vercel AI Gateway key: ' AI_GATEWAY_API_KEY; echo
@@ -109,7 +115,7 @@ scripts/jev-drive --config configs/full-scene.json native-simulate \
 
 The step count is explicit, not automatically inferred for arbitrary scenes. The 4-second reference trajectory horizon is not the scene duration.
 
-With retries enabled, valid `Retry-After` seconds or HTTP dates take precedence. Otherwise waits are 5, 10, 20, 40, then 60 seconds. The same frozen decision is retried until success or cancellation; simulation time does not advance during the wait. Non-429 errors still fail the rollout. No substitute policy is used. Ctrl+C cancels the run.
+Transport-specific retry behavior is documented in the [bundled adapter notes](docs/bundled-adapter.md).
 
 To keep a run alive across SSH disconnection, enter a tmux session **from the configured shell**, then run the simulation command above:
 
@@ -129,31 +135,9 @@ Start the driver with `scripts/jev-drive serve --host 127.0.0.1 --port 6789 --ou
 
 The manifest is a JSON object mapping **internal scene IDs** to runtime-visible USDZ paths; file UUIDs and internal IDs can differ. The native launcher creates this mapping automatically. Configure the runtime driver endpoint, 200000 µs policy interval, ego noise off, explicit traffic mode, and no driver RPC deadline if indefinite 429 waits are enabled. Container mounts must expose the same configuration and scene paths inside the runtime.
 
-## Debugging and tests
+## License
 
-Every structured-input component is a separate Python module. Builders accept a saved `SceneSnapshot` and `Config`, allowing independent debugging without API calls:
-
-```python
-import json
-from pathlib import Path
-from jev_drive.config import Config
-from jev_drive.state.snapshot import SceneSnapshot
-from jev_drive.state.traffic_signals import build
-
-snapshot = SceneSnapshot.from_dict(json.loads(Path("outputs/snapshot/snapshot.json").read_text()))
-print(build(snapshot, Config()))
-```
-
-Run core tests with `scripts/test -q`. To include scene-dependent integration tests, export `JEV_TEST_ARTIFACT` pointing to the compatible 20-second scene used for validation, with populated nearby actors and nonzero initial speed, then run the same command. Tests use fixed/mocked decisions, not the paid API. The full-scene test expects 99 steps to reach the recording end.
-
-Outputs include `decisions.jsonl` (state, response, command, retry and outcome events), `summary.json`, native `.asl` rollouts, controller CSVs, and BEV PNG/GIF visualizations after successful runs. API usage and provider metadata are retained when supplied. HTTP diagnostic logs redact credentials. Outputs can contain scene data and should remain outside the repository.
-
-## Status and limitations
-
-A real one-step Vercel JEV rollout was verified locally. A 99-step native integration test passed with a fixed test client; this is not evidence of full-scene JEV driving performance. Live full-scene JEV evaluation is still in progress and has encountered upstream HTTP 429 responses. A fresh AlpaSim installation on a separate machine has not been validated.
-
-The native launcher is headless, uses recorded traffic replay, and disables photorealistic rendering and ground-contact correction. Traffic is not reactive. Inputs are privileged structured simulator state, not perception outputs. Missing signal phases remain explicitly unknown; static signal geometry alone does not establish right of way.
-
-Default speed-command changes are limited to ±3 m/s² (±0.6 m/s per 0.2-second decision), with separate steering rate/angle bounds. These constrain commands, not guaranteed physical vehicle motion. API latency is allowed to pause simulation, so this is not a real-time capability claim. Successful rollout completion does not establish collision-free or rule-compliant driving.
-
-AlpaSim and externally obtained datasets remain subject to their own licenses and access terms.
+Original JEV-Drive code and documentation are licensed under the [MIT License](LICENSE).
+The AlpaSim runtime patch retains the applicable upstream Apache-2.0 terms;
+scene-derived examples and figures remain subject to their source data terms.
+See [third-party notices](THIRD_PARTY_NOTICES.md) for attribution and scope.

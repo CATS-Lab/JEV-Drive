@@ -1,5 +1,7 @@
 # Structured state: a visual guide
 
+For real scene-to-field comparisons, start with the [BEV field guide](bev-state-guide.md).
+
 These diagrams follow the current Python builders. All numbers and IDs below are **illustrative**, not measurements from a recorded scene. JSON snippets show selected fields, not complete requests. GitHub renders the Mermaid diagrams directly.
 
 For the full simulation lifecycle, see the [complete implementation workflow](full-workflow.md).
@@ -21,7 +23,7 @@ flowchart TD
     N --> S
     T --> S
     S --> M["JevModel adds command state, limits and timing"]
-    M --> J["Vercel request: model + state + questions"]
+    M --> J["JEV client request: state + questions"]
 ```
 
 The runtime-to-driver **envelope** also carries `session_id`, `scene_id`, `step_index`, `timestamp_us`, `decision_dt_s`, `coordinate_frame` and `provenance`. It travels in `DriveRequest.renderer_data`. The API receives the assembled **state**, not the entire envelope; session IDs, provenance and preserved renderer bytes are not added to the API state by this implementation.
