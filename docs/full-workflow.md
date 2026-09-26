@@ -1,5 +1,7 @@
 # Complete implementation workflow
 
+English | [简体中文](full-workflow.zh-CN.md)
+
 The implemented `native-simulate` path connects AlpaSim scene state to a **replaceable JEV client**, then executes the resulting reference through AlpaSim's MPC and vehicle dynamics. The data and control interfaces do not require a particular JEV service provider. The CLI defaults to the official TypeSafe JEV API; alternate clients are selected explicitly through the client factory.
 
 ## End-to-end flow

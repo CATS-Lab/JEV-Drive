@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Render documentation BEVs from saved, provider-independent structured states."""
 
+import argparse
 import json
+import os
 from pathlib import Path
 import numpy as np
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+from matplotlib.text import Text
 from matplotlib.patches import Polygon, Rectangle
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -119,6 +123,24 @@ def panel(tx, heading, obj, notes):
 
 
 def save(fig, name):
+    if TRANSLATIONS:
+        for text in fig.findobj(Text):
+            old = text.get_text()
+            new = old
+            for source, target in sorted(
+                TRANSLATIONS.items(), key=lambda pair: -len(pair[0])
+            ):
+                new = new.replace(source, target)
+            if new != old:
+                text.set_text(new)
+                text.set_fontproperties(
+                    FontProperties(
+                        fname=str(CJK_FONT),
+                        size=text.get_fontsize(),
+                        weight=text.get_fontweight(),
+                        style=text.get_fontstyle(),
+                    )
+                )
     fig.savefig(OUT / name, dpi=160, facecolor="white")
     plt.close(fig)
 
@@ -454,7 +476,29 @@ def commands():
     save(fig, "state-06-control.png")
 
 
+TRANSLATIONS = {}
+CJK_FONT = None
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--language", choices=("en", "zh-CN"), default="en")
+    args = parser.parse_args()
+    if args.language == "zh-CN":
+        TRANSLATIONS = json.loads(
+            (ROOT / "docs/translations/figure-labels.zh-CN.json").read_text()
+        )
+        CJK_FONT = Path(
+            os.environ.get(
+                "JEV_DOC_FONT", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+            )
+        )
+        if not CJK_FONT.is_file():
+            parser.error(
+                "Install Noto Sans CJK or set JEV_DOC_FONT to a CJK font file / 请安装中文字体或设置 JEV_DOC_FONT"
+            )
+        OUT = OUT / "zh-CN"
+        OUT.mkdir(parents=True, exist_ok=True)
     for render in (ego, road, actors, navigation, traffic, commands):
         render()
     print("Wrote 6 state-to-BEV figures to", OUT)

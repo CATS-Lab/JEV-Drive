@@ -1,5 +1,7 @@
 # From a BEV scene to structured fields
 
+English | [简体中文](bev-state-guide.zh-CN.md)
+
 Each figure pairs **actual scene geometry on the left** with **the corresponding structured fields on the right**. Colors and labels identify the same objects in both panels. Click an image to inspect the full-resolution PNG.
 
 All six figures use **one offline snapshot at 0.2 seconds** from scene `clipgt-01330416-9f29-4799-86a6-c4b2f8593375`. It was selected for its 16 nearby actors with available velocity estimates, two stop lines and four signs. Values are rounded to 3 decimals in labels; the saved JSON retains full precision. No JEV API call was needed. The command context in Figure 06 is initialized from this snapshot using the implementation's `ControlState.initialize`; it is not a previous live decision.
@@ -56,3 +58,11 @@ python scripts/render-state-guide.py
 ```
 
 For the complete field schema explanations, see the [structured-state guide](structured-state.md). For how these inputs flow through the simulator and policy, see the [complete workflow](full-workflow.md).
+
+The default command renders English labels. For Chinese figures, install Noto Sans CJK or set `JEV_DOC_FONT` to a CJK font file, then run:
+
+```bash
+python scripts/render-state-guide.py --language zh-CN
+```
+
+Field names and data values stay unchanged between languages.

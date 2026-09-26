@@ -1,5 +1,7 @@
 # Structured state: a visual guide
 
+English | [简体中文](structured-state.zh-CN.md)
+
 For real scene-to-field comparisons, start with the [BEV field guide](bev-state-guide.md).
 
 These diagrams follow the current Python builders. All numbers and IDs below are **illustrative**, not measurements from a recorded scene. JSON snippets show selected fields, not complete requests. GitHub renders the Mermaid diagrams directly.

@@ -1,5 +1,7 @@
 # Third-party notices
 
+English | [简体中文](THIRD_PARTY_NOTICES.zh-CN.md)
+
 The MIT license in `LICENSE` covers original JEV-Drive code and documentation.
 It does not replace third-party licenses or grant rights to externally sourced
 scene data, model weights, or hosted services.
@@ -21,7 +23,7 @@ AlpaSim source tree is obtained separately and is not vendored in this repositor
 
 ## Scene examples and derived figures
 
-`docs/examples/driving-state.json` and all six figures in `docs/images/` derive
+`docs/examples/driving-state.json` and the English/Chinese versions of all six figures in `docs/images/` derive
 from an offline snapshot at 0.2 seconds in the locally available AlpaSim scene
 `clipgt-01330416-9f29-4799-86a6-c4b2f8593375`. They contain extracted structured
 facts, initialized command context and visualizations, not original USDZ archives

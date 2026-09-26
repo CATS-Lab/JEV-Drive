@@ -1,5 +1,7 @@
 # Local development adapter
 
+English | [简体中文](local-development.zh-CN.md)
+
 The public default is the [official TypeSafe JEV API](https://docs.typesafe.ai/introduction/quickstart): `backend: "typesafe"`, `jev-latest`, `TYPESAFE_API_KEY`. The adapter in `policy/jev_client.py` is the normal user entry point.
 
 For this project's local development, the maintainers currently cannot register for direct JEV access, so a separate Vercel adapter is retained. This is a local access workaround, not a requirement for JEV-Drive users or a claim about general registration availability.
