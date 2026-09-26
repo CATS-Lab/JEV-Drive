@@ -1,0 +1,25 @@
+diff --git a/src/runtime/alpasim_runtime/events/policy.py b/src/runtime/alpasim_runtime/events/policy.py
+index 627865f..3feba84 100644
+--- a/src/runtime/alpasim_runtime/events/policy.py
++++ b/src/runtime/alpasim_runtime/events/policy.py
+@@ -11,6 +11,7 @@ trajectory into the context for downstream pipeline events.
+ from __future__ import annotations
+ 
+ import logging
++import os
+ import time
+ 
+ import numpy as np
+@@ -138,6 +139,12 @@ class PolicyEvent(RecurringEvent):
+             return
+ 
+         # --- Driver query ---
++        if os.environ.get("JEV_DRIVE_ENABLED") == "1":
++            from jev_drive.integration.runtime_bridge import build_payload
++
++            state.data_sensorsim_to_driver = build_payload(
++                state, self, state.data_sensorsim_to_driver
++            )
+         drive_trajectory_noisy, terminate_session = await svc.driver.drive(
+             time_now_us=step_start_us,
+             time_query_us=target_time_us,

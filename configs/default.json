@@ -1,0 +1,50 @@
+{
+  "mode": "score",
+  "model": "typesafe-ai/jev",
+  "endpoint": "https://ai-gateway.vercel.sh/v1/evaluate",
+  "api_timeout_s": 120.0,
+  "decision_dt_s": 0.2,
+  "road_roi": [
+    -20.0,
+    80.0,
+    -15.0,
+    15.0
+  ],
+  "actor_roi": [
+    -30.0,
+    80.0,
+    -20.0,
+    20.0
+  ],
+  "max_actors": 16,
+  "centerline_spacing_m": 5.0,
+  "min_target_speed_mps": 0.0,
+  "max_target_speed_mps": 15.0,
+  "max_acceleration_mps2": 3.0,
+  "max_deceleration_mps2": 3.0,
+  "max_abs_steering_rad": 0.4,
+  "max_steering_rate_radps": 0.8,
+  "wheelbase_m": 2.85,
+  "speed_score_gain": 0.25,
+  "steering_score_gain": 0.015,
+  "choice_speed_gain": 1.0,
+  "choice_steering_gain": 0.06,
+  "trajectory_horizon_s": 4.0,
+  "trajectory_frequency_hz": 10.0,
+  "signal_max_age_s": 1.0,
+  "actor_types": {
+    "automobile": "vehicle",
+    "bus": "vehicle",
+    "heavy_truck": "vehicle",
+    "trailer": "vehicle",
+    "vehicle": "vehicle",
+    "pedestrian": "pedestrian",
+    "cyclist": "cyclist",
+    "bicycle": "cyclist",
+    "rider": "unknown"
+  },
+  "retry_429": false,
+  "retry_initial_s": 5.0,
+  "retry_max_s": 60.0,
+  "api_min_interval_s": 0.0
+}

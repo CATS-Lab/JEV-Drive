@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+jev_project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+export PYTHONPATH="$jev_project_root/src${PYTHONPATH:+:$PYTHONPATH}"
+if [[ -n "${ALPASIM_ROOT:-}" ]]; then
+    export PYTHONPATH="$ALPASIM_ROOT/src/runtime:$PYTHONPATH"
+fi
+exec "${JEV_PYTHON:-python}" -m jev_drive.cli "$@"
