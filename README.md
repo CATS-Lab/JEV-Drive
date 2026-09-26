@@ -1,6 +1,10 @@
-# JEV-Drive
+# JEV-Drive: Using JEV to Drive in AlpaSim from Structured Scene State
 
-A research interface connecting **structured AlpaSim scene state → JEV decisions → AlpaSim vehicle motion**. JEV chooses incremental target-speed and steering commands; AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory. The default client calls the official TypeSafe JEV API (`jev-latest`). It does not use the Alpamayo driving model.
+JEV-Drive uses [JEV](https://docs.typesafe.ai/introduction), TypeSafe's model for structured decisions, to drive an ego vehicle in [AlpaSim](https://github.com/NVlabs/alpasim), NVIDIA's driving simulator. JEV reads structured ego state, lane geometry, nearby actors, navigation and traffic-control facts, then chooses incremental target-speed and steering commands. AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory.
+
+**Structured scene state → JEV decisions → bounded control commands → AlpaSim vehicle motion.**
+
+The default client uses the [official JEV API](https://docs.typesafe.ai/introduction/quickstart) (`jev-latest`). See the [AlpaSim README](https://github.com/NVlabs/alpasim#readme) for simulator setup and background. This project uses structured simulator state rather than camera images as the policy input, and does not use the Alpamayo driving model.
 
 This repository contains the integration code, modular state builders, configuration, tests, and a small AlpaSim runtime patch. Small structured-state examples and derived BEV figures are included for documentation. Full scene datasets, model weights, API credentials, experiment outputs, and the AlpaSim source tree are not included.
 
