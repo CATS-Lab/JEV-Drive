@@ -23,6 +23,8 @@ flowchart TD
 | 生成控制参考 | [控制模块](../src/jev_drive/control/) 将回答转换为受约束的指令增量和参考轨迹。 |
 | 执行并再次观测 | [原生集成](../src/jev_drive/integration/native_simulation.py) 运行 AlpaSim 的 MPC 和车辆动力学，实际运动结果成为下一次观测。 |
 
+第 3–4 步的核心转换见 [从 JEV 回答到驾驶控制](jev-control.zh-CN.md)，其中包含实际评分标准和完整指令更新示例。
+
 默认每 0.2 秒仿真时间决策一次。JEV 选择指令变化，AlpaSim 计算实际车辆运动。日志和 BEV 图片用于查看输入、决策和执行结果。
 
 第 2 步各类场景对象与字段的对应关系见 [BEV 状态图解](bev-state-guide.zh-CN.md)，运行方法见 [README](../README.zh-CN.md#使用)。

@@ -16,6 +16,10 @@ This repository contains the integration code, modular state builders, configura
 
 The [five-module workflow](docs/full-workflow.md) explains how these parts connect and links to their implementation.
 
+## How JEV produces control
+
+[From JEV answers to driving control](docs/jev-control.md) explains the two control questions, Score/Choice mapping, rate limits and MPC reference, with a complete numerical example.
+
 ## Structured state, illustrated
 
 The [BEV state guide](docs/bev-state-guide.md) pairs each scene element with its actual structured fields, explains the key conventions, and links to the builders.

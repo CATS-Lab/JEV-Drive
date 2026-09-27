@@ -16,6 +16,10 @@ JEV-Drive 使用 TypeSafe 的结构化决策模型 [JEV](https://docs.typesafe.a
 
 [五模块流程图](docs/full-workflow.zh-CN.md) 说明各部分如何衔接，并链接到对应实现。
 
+## 如何让 JEV 输出控制
+
+[从 JEV 回答到驾驶控制](docs/jev-control.zh-CN.md) 重点说明两个控制问题、Score/Choice 映射、变化率约束和 MPC 参考轨迹，并用完整数值例子展示转换过程。
+
 ## 结构化状态图解
 
 [BEV 状态图解](docs/bev-state-guide.zh-CN.md) 将场景对象与实际结构化字段并排展示，说明关键约定，并链接到构建器。

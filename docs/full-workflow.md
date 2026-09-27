@@ -23,6 +23,8 @@ flowchart TD
 | Generate control reference | [Control modules](../src/jev_drive/control/) convert answers into bounded command increments and a reference trajectory. |
 | Execute and observe again | [The native integration](../src/jev_drive/integration/native_simulation.py) runs AlpaSim's MPC and dynamics. Actual resulting motion becomes the next observation. |
 
+The core decision-to-control conversion in steps 3–4 is explained in [From JEV answers to driving control](jev-control.md), including the actual scoring rubric and a worked update.
+
 At the default settings, this loop makes one decision per 0.2 seconds of simulation. JEV selects command changes; AlpaSim produces the vehicle motion. Logs and BEV images let users inspect the inputs, decisions and outcomes.
 
 See the [BEV state guide](bev-state-guide.md) for the scene elements and structured fields used in step 2, and the [README](../README.md#usage) to run the implementation.
