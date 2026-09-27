@@ -10,40 +10,15 @@ The default client uses the [official JEV API](https://docs.typesafe.ai/introduc
 
 This repository contains the integration code, modular state builders, configuration, tests, and a small AlpaSim runtime patch. Small structured-state examples and derived BEV figures are included for documentation. Full scene datasets, model weights, API credentials, experiment outputs, and the AlpaSim source tree are not included.
 
-## Architecture
+## How it works
 
-```text
-AlpaSim PolicyEvent
-  → runtime_bridge + AlpasimAdapter
-  → SceneSnapshot → independent state builders
-  → versioned JSON in DriveRequest.renderer_data
-  → JEV gRPC driver → JevModel → replaceable JEV client
-  → bounded speed/steering increments → reference trajectory
-  → AlpaSim MPC + vehicle dynamics → next scene state
-```
+**Read the scene → build structured state → ask JEV → generate bounded control → execute in AlpaSim → observe again.**
 
-| Interface | Location | Responsibility |
-|---|---|---|
-| Simulator adapter | `src/jev_drive/integration/alpasim_adapter.py` | Current/past ego and actor state; source map and traffic-control facts |
-| Runtime bridge | `src/jev_drive/integration/runtime_bridge.py` | Package the state at each policy step |
-| Transport schema | `src/jev_drive/state/schema.py` | Version, session, timestamp, frame and finite-value validation |
-| State builders | `src/jev_drive/state/` | Separate modules for ego, roads, actors, lane matching, navigation, signals, stop lines, signs and vehicle constraints |
-| Driver service | `src/jev_drive/integration/driver_service.py` | AlpaSim `EgodriverService` gRPC interface |
-| Policy | `src/jev_drive/policy/jev_model.py` | Per-session decision state and response interpretation |
-| Official JEV client | `src/jev_drive/policy/jev_client.py` | TypeSafe JEV API using `TYPESAFE_API_KEY` |
-| Control conversion | `src/jev_drive/control/` | Score/Choice mapping, rate limits and trajectory generation |
+The [five-module workflow](docs/full-workflow.md) explains how these parts connect and links to their implementation.
 
-The transport has `kind=jev.scene_snapshot`, `schema_version=1`, session and simulation timestamps, and an ego-local frame (+x forward, +y left, +z up). Original renderer bytes are preserved separately, not sent to JEV. A replacement backend implements `async decide(state, questions)`; see the existing client and model for the response contract. The CLI also calls `async close()` on the client.
+## Structured state, illustrated
 
-## Complete workflow
-
-See the [end-to-end implementation flowchart](docs/full-workflow.md) for startup, structured state, JEV decisions, MPC execution and saved outputs. The workflow does not require a particular JEV service provider.
-
-## Visual guide to structured inputs
-
-Start with the [real-scene BEV field guide](docs/bev-state-guide.md): each figure places an annotated scene beside its actual structured fields.
-
-See [Structured state: a visual guide](docs/structured-state.md) for diagrams of ego state, road geometry, actors, navigation, traffic controls and command constraints, with small JSON examples and links to each builder.
+The [BEV state guide](docs/bev-state-guide.md) pairs each scene element with its actual structured fields, explains the key conventions, and links to the builders.
 
 ## Installation
 

@@ -12,11 +12,15 @@
 
 ![自车包围盒、参考原点及 state.ego 字段](images/zh-CN/state-01-ego.png)
 
+`speed_mps` 是纵向速度分量。车身几何、实际运动和控制目标是不同量。构建器：[ego.py](../src/jev_drive/state/ego.py)。
+
 ## 02. 道路几何和车道标识
 
 蓝色突出一条保留车道，紫色/橙色分别为其左右边界。P0–P2 对应右侧列出的前三个中心线采样点。L1 是图中的选择标记，不会替代原始车道 ID。
 
 ![选中车道、采样点与道路字段](images/zh-CN/state-02-road.png)
+
+`roi_m` 按 `[x_min, x_max, y_min, y_max]` 排列，单位米；道路默认裁剪范围为 `[-20, 80, -15, 15]`。中心线默认每 5 米采样并保留端点。不连续 `segments` 不能跨空隙连线。邻道和后继 ID 保留源拓扑；`references_outside_roi` 与 `unresolved_references` 含义不同。构建器：[road_graph.py](../src/jev_drive/state/road_graph.py)。
 
 ## 03. 周边对象
 
@@ -24,11 +28,15 @@ A1 指向橙色车辆及其真实数组项；其他对象标有源 ID。速度�
 
 ![选中对象的包围盒与结构化字段](images/zh-CN/state-03-actors.png)
 
+对象默认裁剪范围为 `[-30, 80, -20, 20]`，最多保留最近的 16 个。相对速度等于对象速度减自车速度，再旋转到自车坐标轴；不含旋转坐标系位置导数的额外修正。未知速度为 `null`，缺失或歧义车道匹配返回 `lane_id: null`。构建器：[actors.py](../src/jev_drive/state/actors.py)、[lane_matching.py](../src/jev_drive/state/lane_matching.py)。
+
 ## 04. 导航路线
 
 R0、R4、R8、R12、R16 标记 `route_segments[0]` 中的实际索引。蓝线是导航输入，不是 JEV 生成的参考轨迹。
 
 ![路线采样点与导航数组项](images/zh-CN/state-04-navigation.png)
+
+导航使用道路 ROI，保留不连续路线片段，`source` 记录来源。路线意图可向前延伸，但不暴露未来对象运动或信号灯观测。构建器：[navigation.py](../src/jev_drive/state/navigation.py)。
 
 ## 05. 停止线和交通标志
 
@@ -38,11 +46,21 @@ R0、R4、R8、R12、R16 标记 `route_segments[0]` 中的实际索引。蓝线�
 
 该裁剪范围没有保留的信号灯对象，因此表示为 `signals: []`，信号相位可用性为 `unavailable`。空数组不意味着整个世界不存在信号灯。对于有几何对象但没有当前相位观测的信号灯，接口使用 `phase: "unknown"`。这些真实场景图中没有添加虚构的红绿灯。
 
+信号观测不能晚于当前时刻。默认有效期为 1 秒；过期样本保留时间戳和来源，但返回 `phase: "unknown"` 与 `phase_stale: true`。数据可用性与对象数组分别记录。构建器：[traffic_signals.py](../src/jev_drive/state/traffic_signals.py)、[stop_lines.py](../src/jev_drive/state/stop_lines.py)、[traffic_signs.py](../src/jev_drive/state/traffic_signs.py)。
+
 ## 06. 控制上下文和约束
 
 实际自车速度与控制目标是不同量。本离线示例用 `ControlState.initialize` 从快照初始化目标速度和转向，再加入 `JevModel` 调用客户端前会提供的 `vehicle_constraints` 和时间字段。它们限定指令如何变化，不直接保证车辆瞬时运动。
 
 ![实际自车状态、控制状态及车辆约束](images/zh-CN/state-06-control.png)
+
+默认每 0.2 秒决策，目标速度变化最多 0.6 m/s，转向变化最多 0.16 rad，随后应用绝对值边界。实现见 [vehicle_constraints.py](../src/jev_drive/state/vehicle_constraints.py) 和 [limits.py](../src/jev_drive/control/limits.py)。
+
+### 在哪里查看完整状态
+
+构建器生成带版本封装（`kind: jev.scene_snapshot`、`schema_version: 1`），通过 `DriveRequest.renderer_data` 传输。其 `state` 包含五类场景信息，会话、时间、坐标系元数据和来源另行保存。`JevModel` 在调用客户端前补充控制字段、车辆约束及时间信息。原始渲染字节不发送给 JEV。
+
+`outputs/<snapshot>/state.json` 可查看构建器封装；`outputs/<run>/decisions.jsonl` 中决策事件的 `state` 是含补充上下文的实际模型输入。实现见 [state_builder.py](../src/jev_drive/state/state_builder.py)、[schema.py](../src/jev_drive/state/schema.py) 和 [jev_model.py](../src/jev_drive/policy/jev_model.py)。
 
 ## 数据与复现
 
@@ -63,4 +81,4 @@ python scripts/render-state-guide.py
 python scripts/render-state-guide.py --language zh-CN
 ```
 
-字段语义见 [结构化状态说明](structured-state.zh-CN.md)，输入如何进入策略和仿真器见 [完整实现流程](full-workflow.zh-CN.md)。
+输入如何进入策略和仿真器见 [JEV-Drive 实现流程](full-workflow.zh-CN.md)。

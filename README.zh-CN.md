@@ -10,40 +10,15 @@ JEV-Drive 使用 TypeSafe 的结构化决策模型 [JEV](https://docs.typesafe.a
 
 仓库包含集成代码、分模块的状态构建器、配置、测试，以及一个小型 AlpaSim 运行时补丁。文档附有少量结构化状态示例和对应 BEV 图。完整场景数据、模型权重、API 密钥、实验输出和 AlpaSim 源码树不在本仓库中。
 
-## 架构
+## 实现流程
 
-```text
-AlpaSim PolicyEvent
-  → runtime_bridge + AlpasimAdapter
-  → SceneSnapshot → 各部分状态构建器
-  → DriveRequest.renderer_data 中的带版本 JSON
-  → JEV gRPC 驱动 → JevModel → 可替换的 JEV 客户端
-  → 受约束的速度/转向增量 → 参考轨迹
-  → AlpaSim MPC + 车辆动力学 → 下一时刻场景状态
-```
+**读取场景 → 构建结构化状态 → JEV 决策 → 生成受约束控制 → AlpaSim 执行 → 再次观测。**
 
-| 接口 | 位置 | 职责 |
-|---|---|---|
-| 仿真器适配器 | `src/jev_drive/integration/alpasim_adapter.py` | 当前及过去的自车/对象状态、源地图和交通控制事实 |
-| 运行时桥接 | `src/jev_drive/integration/runtime_bridge.py` | 在每个策略步封装状态 |
-| 传输结构 | `src/jev_drive/state/schema.py` | 校验版本、会话、时间戳、坐标系和数值有限性 |
-| 状态构建器 | `src/jev_drive/state/` | 自车、道路、对象、车道匹配、导航、信号灯、停止线、标志和车辆约束分别实现 |
-| 驱动服务 | `src/jev_drive/integration/driver_service.py` | AlpaSim `EgodriverService` gRPC 接口 |
-| 策略 | `src/jev_drive/policy/jev_model.py` | 各会话的决策状态与回答解释 |
-| 官方 JEV 客户端 | `src/jev_drive/policy/jev_client.py` | 使用 `TYPESAFE_API_KEY` 调用 TypeSafe JEV API |
-| 控制转换 | `src/jev_drive/control/` | Score/Choice 映射、变化率约束和轨迹生成 |
+[五模块流程图](docs/full-workflow.zh-CN.md) 说明各部分如何衔接，并链接到对应实现。
 
-传输封装使用 `kind=jev.scene_snapshot`、`schema_version=1`，包含会话、仿真时间戳，以及自车局部坐标系（+x 向前、+y 向左、+z 向上）。原始渲染数据单独保留，不发送给 JEV。替换客户端需实现 `async decide(state, questions)`，返回结构见现有客户端与模型；CLI 退出时还会调用 `async close()`。
+## 结构化状态图解
 
-## 完整流程
-
-[完整实现流程图](docs/full-workflow.zh-CN.md) 展示启动、状态构建、JEV 决策、MPC 执行和结果保存。整体流程不依赖特定的 JEV 服务提供方。
-
-## 结构化输入图解
-
-先看 [真实场景 BEV 字段对照](docs/bev-state-guide.zh-CN.md)：每张图将标注后的场景与实际结构化字段并排展示。
-
-[结构化状态说明](docs/structured-state.zh-CN.md) 进一步介绍自车、道路、对象、导航、交通控制和车辆约束，附简短 JSON 示例与源码链接。
+[BEV 状态图解](docs/bev-state-guide.zh-CN.md) 将场景对象与实际结构化字段并排展示，说明关键约定，并链接到构建器。
 
 ## 安装
 
