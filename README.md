@@ -8,13 +8,23 @@ JEV-Drive uses TypeSafe's [JEV](https://docs.typesafe.ai/introduction) to drive 
 
 The default client uses the [official JEV API](https://docs.typesafe.ai/introduction/quickstart) (`jev-latest`). Policy input comes from structured simulator state; this project does not use the Alpamayo driving model.
 
-## Example
+## Examples
+
+Same scene and timestamps: **65 decision frames spanning 12.8 s** from a partial JEV Score rollout, recorded with the [development client](docs/local-development.md). Four same-direction lanes are labeled **L1–L4, left to right**. GT follows the original recorded trajectory: **L3 → L2 → L3**; JEV's body center stays in L3 during this excerpt.
+
+**Fixed-view panorama — GT above, JEV below; vehicles travel to the right.**
 
 <p align="center">
-  <img src="docs/images/rollout-preview.gif" width="300" alt="JEV-driven ego vehicle moving through a fixed-view AlpaSim scene">
+  <img src="docs/images/lane-panorama.gif" width="960" alt="Horizontal fixed-view GT and JEV comparison with four consistently colored lanes">
 </p>
 
-Partial JEV Score rollout: **65 decision frames spanning 12.8 s**, recorded with the [development client](docs/local-development.md). Green: ego; red: traffic; blue: route; teal: driven path; dashed green: reference.
+**Lane close-up — GT left, JEV right; each camera follows its ego vehicle.**
+
+<p align="center">
+  <img src="docs/images/lane-closeup.gif" width="800" alt="GT and JEV lane close-up showing stable lane labels, body-center lane and boundary overlap">
+</p>
+
+Lane colors and IDs stay consistent across both views. Green is the ego vehicle; a red outline in the close-up marks body overlap with a mapped boundary. Highway classification is unverified; map edges do not identify painted marking types.
 
 ## Understand the implementation
 

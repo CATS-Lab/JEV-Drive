@@ -8,13 +8,23 @@ JEV-Drive 使用 TypeSafe 的 [JEV](https://docs.typesafe.ai/introduction)，在
 
 默认使用 [JEV 官方 API](https://docs.typesafe.ai/introduction/quickstart)，模型为 `jev-latest`。策略输入来自结构化仿真状态，不使用 Alpamayo 驾驶模型。
 
-## 运行示例
+## 示例
+
+同一场景、相同时间点：JEV Score 阶段性运行中的 **65 个决策帧，首末相隔 12.8 秒**，使用 [开发客户端](docs/local-development.zh-CN.md) 录制。**同向 4 车道，沿行驶方向从左到右编号 L1–L4**。GT 是原始记录轨迹，行驶过程为 **L3 → L2 → L3**；这段片段中 JEV 的车身中心始终位于 L3。
+
+**固定视角全景：上方 GT，下方 JEV，车辆向右行驶。**
 
 <p align="center">
-  <img src="docs/images/rollout-preview.gif" width="300" alt="固定视角下，JEV 驱动自车在 AlpaSim 场景中行驶">
+  <img src="docs/images/zh-CN/lane-panorama.gif" width="960" alt="横向固定视角下，GT 与 JEV 在四条固定配色车道中的行驶对比">
 </p>
 
-JEV Score 阶段性片段：**65 个决策帧，首末相隔 12.8 秒**，使用 [开发客户端](docs/local-development.zh-CN.md) 录制。绿色：自车；红色：其他车辆；蓝色：路线；青色：已行驶路径；绿色虚线：参考轨迹。
+**车道近景：左侧 GT，右侧 JEV，各自跟随自车。**
+
+<p align="center">
+  <img src="docs/images/zh-CN/lane-closeup.gif" width="800" alt="GT 与 JEV 车道近景，标注车道编号、车身中心所在车道及跨边界状态">
+</p>
+
+两种视角的车道颜色和编号一致。绿色是自车，近景中的红色车身轮廓表示与地图边界相交。高速公路属性尚未确认；地图边界不代表实际标线类型。
 
 ## 了解实现
 
