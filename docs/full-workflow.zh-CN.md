@@ -27,4 +27,4 @@ flowchart TD
 
 默认每 0.2 秒仿真时间决策一次。JEV 选择指令变化，AlpaSim 计算实际车辆运动。日志和 BEV 图片用于查看输入、决策和执行结果。
 
-第 2 步各类场景对象与字段的对应关系见 [BEV 状态图解](bev-state-guide.zh-CN.md)，运行方法见 [README](../README.zh-CN.md#使用)。
+第 2 步各类场景对象与字段的对应关系见 [BEV 状态图解](bev-state-guide.zh-CN.md)，运行方法见 [README](../README.zh-CN.md#快速开始)。

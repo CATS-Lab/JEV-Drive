@@ -27,4 +27,4 @@ The core decision-to-control conversion in steps 3–4 is explained in [From JEV
 
 At the default settings, this loop makes one decision per 0.2 seconds of simulation. JEV selects command changes; AlpaSim produces the vehicle motion. Logs and BEV images let users inspect the inputs, decisions and outcomes.
 
-See the [BEV state guide](bev-state-guide.md) for the scene elements and structured fields used in step 2, and the [README](../README.md#usage) to run the implementation.
+See the [BEV state guide](bev-state-guide.md) for the scene elements and structured fields used in step 2, and the [README](../README.md#quick-start) to run the implementation.
