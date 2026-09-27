@@ -14,7 +14,7 @@ JEV-Drive 使用 TypeSafe 的 [JEV](https://docs.typesafe.ai/introduction)，在
   <img src="docs/images/rollout-preview.gif" width="300" alt="固定视角下，JEV 驱动自车在 AlpaSim 场景中行驶">
 </p>
 
-JEV Score 阶段性片段：**18 个决策帧，首末相隔 3.4 秒**，使用 [开发客户端](docs/local-development.zh-CN.md) 录制。绿色：自车；红色：其他车辆；蓝色：路线；青色：已行驶路径；绿色虚线：参考轨迹。
+JEV Score 阶段性片段：**65 个决策帧，首末相隔 12.8 秒**，使用 [开发客户端](docs/local-development.zh-CN.md) 录制。绿色：自车；红色：其他车辆；蓝色：路线；青色：已行驶路径；绿色虚线：参考轨迹。
 
 ## 了解实现
 

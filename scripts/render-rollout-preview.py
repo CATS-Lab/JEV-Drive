@@ -131,8 +131,10 @@ xmin, xmax = min(-23, float(cloud[:, 0].min()) - 3), max(
 ymin, ymax = min(-22, float(cloud[:, 1].min()) - 3), max(
     85, float(cloud[:, 1].max()) + 5
 )
-# Use map crops at the beginning and end as a fixed background, transformed with real poses.
-background = [rows[0], rows[-1]] if len(rows) > 1 else [rows[0]]
+# Sample overlapping map crops along the drive to keep longer previews continuous.
+background = rows[::10]
+if background[-1] is not rows[-1]:
+    background.append(rows[-1])
 all_pose_times = sorted(t for t in poses if t >= t0 and t <= rows[-1]["timestamp_us"])
 all_pose_positions = np.array([poses[t][0] for t in all_pose_times])
 distance = np.r_[
@@ -151,8 +153,9 @@ def draw(ax, i, detail=True):
             for side in ["left_boundary", "right_boundary"]:
                 for seg in lane[side]["segments"]:
                     line(ax, bg, seg, color="#e2e5e9", lw=0.45, zorder=1)
-    for seg in rows[0]["state"]["navigation"]["route_segments"]:
-        line(ax, rows[0], seg, color="#228be6", lw=1.4, label=None, zorder=2)
+    for bg in background:
+        for seg in bg["state"]["navigation"]["route_segments"]:
+            line(ax, bg, seg, color="#228be6", lw=1.4, label=None, zorder=2)
     for a in s["actors"]:
         vehicle(
             ax,
@@ -239,11 +242,10 @@ for i in range(len(rows)):
         spine.set_visible(False)
     # Keep only simulation time; the README provides the color legend.
     elapsed = (rows[i]["timestamp_us"] - t0) / 1e6
-    ax.text(
+    fig.text(
         0.04,
         0.97,
         f"{elapsed:.1f} s",
-        transform=ax.transAxes,
         va="top",
         fontsize=12,
         color="#475569",

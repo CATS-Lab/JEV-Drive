@@ -5,8 +5,8 @@
   "scene_id": "clipgt-07054c19-f27f-42cc-8413-35e05c924d06",
   "policy_source": "vercel_ai_gateway",
   "mode": "score",
-  "decision_frames": 18,
-  "time_span_s": 3.4,
-  "traveled_m": 48.931121224288205,
+  "decision_frames": 65,
+  "time_span_s": 12.8,
+  "traveled_m": 174.13477813712018,
   "frame_duration_ms": 200
 }
