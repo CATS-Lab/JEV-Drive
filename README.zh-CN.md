@@ -8,6 +8,14 @@ JEV-Drive 使用 TypeSafe 的 [JEV](https://docs.typesafe.ai/introduction)，在
 
 默认使用 [JEV 官方 API](https://docs.typesafe.ai/introduction/quickstart)，模型为 `jev-latest`。策略输入来自结构化仿真状态，不使用 Alpamayo 驾驶模型。
 
+## 运行示例
+
+<p align="center">
+  <img src="docs/images/rollout-preview.gif" width="300" alt="固定视角下，JEV 驱动自车在 AlpaSim 场景中行驶">
+</p>
+
+JEV Score 阶段性片段：**18 个决策帧，首末相隔 3.4 秒**，使用 [开发客户端](docs/local-development.zh-CN.md) 录制。绿色：自车；红色：其他车辆；蓝色：路线；青色：已行驶路径；绿色虚线：参考轨迹。
+
 ## 了解实现
 
 - **[如何让 JEV 输出控制](docs/jev-control.zh-CN.md)**：提问、Score/Choice 回答、指令约束和轨迹生成，附完整数值例子。

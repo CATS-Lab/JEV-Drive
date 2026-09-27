@@ -18,6 +18,8 @@
 
 `docs/examples/driving-state.json` 以及 `docs/images/` 下六类图的中英文版本，来自本地 AlpaSim 场景 `clipgt-01330416-9f29-4799-86a6-c4b2f8593375` 在 0.2 秒时的离线快照。它们包含提取的结构化事实、初始化控制上下文和可视化，不含原始 USDZ 文件或真实 JEV 模型回答。
 
+主页动画 `docs/images/rollout-preview.gif` 来自场景 `clipgt-07054c19-f27f-42cc-8413-35e05c924d06` 的真实 JEV Score 阶段性运行，使用本地开发客户端录制。18 个决策帧首末相隔 3.4 秒，元数据见 `docs/images/rollout-preview.json`。它属于场景衍生可视化，适用下述源数据许可范围。
+
 底层场景数据及其衍生示例中的相关权利仍受原始数据集许可证和访问条款约束。本仓库不授予这些底层数据的 MIT 权利。AlpaSim 软件许可证本身不能确定数据集许可。原创绘图脚本属于 JEV-Drive 代码，采用 MIT 许可证。
 
 ## 其他依赖和服务

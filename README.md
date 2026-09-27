@@ -8,6 +8,14 @@ JEV-Drive uses TypeSafe's [JEV](https://docs.typesafe.ai/introduction) to drive 
 
 The default client uses the [official JEV API](https://docs.typesafe.ai/introduction/quickstart) (`jev-latest`). Policy input comes from structured simulator state; this project does not use the Alpamayo driving model.
 
+## Example
+
+<p align="center">
+  <img src="docs/images/rollout-preview.gif" width="300" alt="JEV-driven ego vehicle moving through a fixed-view AlpaSim scene">
+</p>
+
+Partial JEV Score rollout: **18 decision frames spanning 3.4 s**, recorded with the [development client](docs/local-development.md). Green: ego; red: traffic; blue: route; teal: driven path; dashed green: reference.
+
 ## Understand the implementation
 
 - **[How JEV produces control](docs/jev-control.md)** — questions, Score/Choice answers, command limits and trajectory generation, with a worked example.

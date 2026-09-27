@@ -29,6 +29,12 @@ from an offline snapshot at 0.2 seconds in the locally available AlpaSim scene
 facts, initialized command context and visualizations, not original USDZ archives
 or a live JEV model response.
 
+The homepage animation `docs/images/rollout-preview.gif` is a partial live JEV
+Score rollout from scene `clipgt-07054c19-f27f-42cc-8413-35e05c924d06`, captured
+using the local development client. Its 18 decision frames span 3.4 seconds;
+metadata is in `docs/images/rollout-preview.json`. It is a scene-derived
+visualization, subject to the same source-data scope described below.
+
 Underlying scene data and any rights in derived examples remain subject to the
 original dataset's license and access terms. This repository does not grant MIT
 rights to those underlying data. Dataset permission terms are not established
