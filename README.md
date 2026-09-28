@@ -2,13 +2,13 @@
 
 English | [简体中文](README.zh-CN.md)
 
-JEV-Drive uses TypeSafe's [JEV](https://docs.typesafe.ai/introduction) to drive an ego vehicle in NVIDIA's [AlpaSim](https://github.com/NVlabs/alpasim). JEV reads structured ego state, lanes, nearby actors, navigation and traffic controls, then selects speed and steering changes. AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory.
+JEV-Drive uses TypeSafe's [JEV](https://docs.typesafe.ai/introduction) to drive an ego vehicle in NVIDIA's [AlpaSim](https://github.com/NVlabs/alpasim). JEV reads structured ego state, lanes, nearby actors, navigation and traffic controls, then selects speed updates and absolute steering targets. AlpaSim's MPC and vehicle dynamics execute the resulting reference trajectory.
 
 **Structured scene state → JEV decisions → bounded control → AlpaSim motion → next observation.**
 
 The default client uses the [official JEV API](https://docs.typesafe.ai/introduction/quickstart) (`jev-latest`). Policy input comes from structured simulator state; this project does not use the Alpamayo driving model.
 
-Navigation now uses [map-derived road corridors](docs/navigation.md), not intermediate GT waypoints. The example rollouts below were recorded before this change.
+Navigation now uses [map-derived road corridors](docs/navigation.md), not intermediate GT waypoints. The example rollouts below predate both this change and the v1.5 control corrections.
 
 ## Examples
 

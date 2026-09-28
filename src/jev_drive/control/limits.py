@@ -19,12 +19,18 @@ def apply(control, raw_speed, raw_steering, dt, config):
         -config.max_steering_rate_radps * dt,
         config.max_steering_rate_radps * dt,
     )
+    speed = clip(
+        control.target_speed + dv,
+        config.min_target_speed_mps,
+        config.max_target_speed_mps,
+    )
+    if control.target_speed > config.max_target_speed_mps:
+        speed = max(
+            speed,
+            control.target_speed - config.max_deceleration_mps2 * dt,
+        )
     updated = ControlState(
-        clip(
-            control.target_speed + dv,
-            config.min_target_speed_mps,
-            config.max_target_speed_mps,
-        ),
+        speed,
         clip(
             control.steering_angle + ds,
             -config.max_abs_steering_rad,
@@ -32,6 +38,7 @@ def apply(control, raw_speed, raw_steering, dt, config):
         ),
     )
     return updated, {
+        "speed_cap_recovery": control.target_speed > config.max_target_speed_mps,
         "raw_delta_speed": raw_speed,
         "raw_delta_steering": raw_steering,
         "rate_limited_delta_speed": dv,

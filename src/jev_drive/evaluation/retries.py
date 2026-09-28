@@ -3,6 +3,7 @@
 import asyncio
 import json
 from pathlib import Path
+from ..policy.questions import VERSION
 import numpy as np
 from .replay import ReplayClient
 from .safety import SafetyMonitor, SafetyViolation
@@ -157,7 +158,7 @@ async def run_scene(
         save(path, report)
         return report
     prefix = decisions(seed_log) if seed_log else []
-    if any(r.get("prompt_version") != "jev-drive-v1.4" for r in prefix):
+    if any(r.get("prompt_version") != VERSION for r in prefix):
         raise ValueError("seed prompt version differs from current experiment baseline")
     checkpoint = context = None
     budget = {"remaining": report["new_decision_call_limit"]}

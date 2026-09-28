@@ -11,10 +11,11 @@ class ControlState:
 
     @classmethod
     def initialize(cls, ego, config):
-        speed = max(
-            config.min_target_speed_mps,
-            min(config.max_target_speed_mps, ego["speed_mps"]),
-        )
+        speed = float(ego["speed_mps"])
+        if not math.isfinite(speed) or speed < 0:
+            raise ValueError("initial speed must be finite and forward")
+        # Preserve actual motion, including overspeed. Limits bring the command
+        # back into range gradually; yaw-to-steering uses actual speed too.
         steer = (
             math.atan(config.wheelbase_m * ego["yaw_rate_radps"] / speed)
             if speed > 0.25

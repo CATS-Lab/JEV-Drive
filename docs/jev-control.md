@@ -2,156 +2,73 @@
 
 English | [简体中文](jev-control.zh-CN.md)
 
-JEV selects **changes to the target speed and reference steering command**. Our code converts its structured answers into bounded commands and a reference trajectory; AlpaSim's MPC and vehicle dynamics execute that reference. The default mode is **Score**, with **Choice** available as an alternative.
+Prompt **`jev-drive-v1.5`** asks JEV for a speed action and an **absolute reference steering target**. The model chooses the driving action; our code applies command limits and generates a reference for AlpaSim's MPC.
 
 ```mermaid
 flowchart LR
-    A["State + two control questions"] --> B["JEV: speed and steering answers"]
-    B --> C["Map answers to increments<br/>apply rate and absolute limits"]
-    C --> D["Reference trajectory → AlpaSim MPC"]
+    A[Structured state + two questions] --> B[JEV action probabilities]
+    B --> C[Select explicit action]
+    C --> D[Speed update + absolute steering target]
+    D --> E[Rate limits + speed-ramped trajectory]
+    E --> F[AlpaSim MPC and vehicle dynamics]
 ```
 
-## 1. What we ask JEV
+## Questions and safety instructions
 
-Every decision uses one request containing the same scene state and two named questions:
+The shared prompt requires the whole vehicle to remain within source road edges, avoid collision, follow lane travel directions, avoid shoulders and respect known traffic-control facts. Road-corridor navigation does not prescribe GT waypoints or override safety. Unknown signals remain unknown. These are model instructions, not a collision-prevention guarantee.
 
-| Question | Meaning | Direction |
-|---|---|---|
-| `speed` | How much should the current target speed change? | Positive = accelerate; negative = decelerate |
-| `steering` | How much should the current reference steering command change? | Positive = left; negative = right |
+Every level is a standalone semantic description: it names a driving situation and the corresponding action. Steering levels distinguish a sharp bend or large path error from a broad bend or small error, and specify the correction direction. Straight means **zero reference steering**, unwinding the previous turn within the steering-rate limit. It does not mean maintaining an existing turn. Exact English criteria are in [questions.py](../src/jev_drive/policy/questions.py).
 
-The shared instructions tell JEV to follow the route, stay on drivable roads, avoid collisions and interpret the supplied traffic-control facts. Unknown signal phases remain unknown. JEV also receives measured ego motion, `current_target_speed_mps`, `commanded_steering_rad`, `decision_dt_s` and `vehicle_constraints`. The builders do not select a maneuver in advance.
+## Score mode
 
-Prompt `jev-drive-v1.3` explicitly prohibits wrong-way driving, crossing source road edges with any part of the ego vehicle, and collision or footprint overlap with actors. It asks JEV to consider dimensions, velocity and closing gaps, maintain braking clearance, and slow or stop before contact without assuming others will yield. These are textual requirements, not a safety override. `road.road_boundaries.edges` now carries original map RoadEdge polylines separately from lane dividers; clipping retains source vertices and does not invent ROI edges. These are open boundaries, not a closed drivable-area polygon or guaranteed map completeness. Lane-marking styles and colors are now populated from raw source vertices in v1.4. Earlier v1.2 experiments omitted this available source-map layer and have not been rerun with the correction.
+Each axis has nine ordered levels. We validate the returned Score and probabilities, then execute the **unique highest-probability level**. The continuous score is retained for diagnostics; it is not accumulated into control. A tie for highest probability fails the decision explicitly instead of inventing an averaged action.
 
-Prompt `jev-drive-v1.2` replaces GT route geometry with [road-level navigation](navigation.md); lane choice and maneuver timing remain JEV decisions.
+| Level | Speed action | Steering target | Default steering angle |
+|---:|---|---|---:|
+| 0 | Strongest allowed braking for imminent danger | Strong right | −0.400 rad |
+| 1 | Firm braking for rapidly closing hazards | Firm right | −0.150 rad |
+| 2 | Moderate slowing for reduced clearance | Moderate right | −0.060 rad |
+| 3 | Gentle slowing for modest excess speed | Gentle right | −0.015 rad |
+| 4 | Maintain an appropriate target speed | Straight; unwind previous turn | 0 rad |
+| 5 | Gentle acceleration with clear space | Gentle left | +0.015 rad |
+| 6 | Moderate acceleration on an open lane | Moderate left | +0.060 rad |
+| 7 | Firm acceleration when substantially too slow | Firm left | +0.150 rad |
+| 8 | Strongest allowed acceleration from low speed with ample clearance | Strong left | +0.400 rad |
 
-[questions.py](../src/jev_drive/policy/questions.py) constructs the exact instructions and criteria. The questions ask JEV to consider both axes, but their answers are separate judgments against the same state; one answer is not fed into the other question.
-
-## 2. Default Score mode: a numerical control rubric
-
-Each question has nine ordered criteria, indexed **0–8**, centered on **4 = zero increment**. The text of each criterion specifies a control change before limits. At the default gains:
-
-| Score level | Target-speed increment (m/s) | Steering-command increment (rad) |
-|---|---:|---:|
-| 0 | −1.00 | −0.060 |
-| 1 | −0.75 | −0.045 |
-| 2 | −0.50 | −0.030 |
-| 3 | −0.25 | −0.015 |
-| 4 | 0.00 | 0.000 |
-| 5 | +0.25 | +0.015 |
-| 6 | +0.50 | +0.030 |
-| 7 | +0.75 | +0.045 |
-| 8 | +1.00 | +0.060 |
-
-This is a rubric for **two separate questions**, not a requirement to choose the same row for both. JEV can return a fractional score, which produces a continuous increment:
+These are two separate questions, not paired actions. Numeric magnitudes are applied in code; the model's criteria describe situations and actions.
 
 ```text
-raw_delta_speed    = (speed.score    - 4) × speed_score_gain
-raw_delta_steering = (steering.score - 4) × steering_score_gain
-
-Default gains: 0.25 m/s per score level; 0.015 rad per score level.
+speed increment = (selected_speed_level − 4) × speed_score_gain
+steering target = steering_targets[selected_steering_level]
+steering change = steering target − previous steering command
 ```
 
-The speed question asks for a signed target-speed increment, with levels ordered from deceleration to acceleration. The steering question asks for a signed increment added to the current command. For example, level 5's generated criteria are `Change target speed by +0.250 m/s before rate limits.` and `Change steering command by +0.0150 radians before rate limits.`
+Defaults are `speed_score_gain=0.25 m/s` and `steering_score_gain=0.015 rad`. Gentle, moderate and firm steering magnitudes use 1×, 4× and 10× the steering gain, capped by the angle bound; strong steering uses the full configured bound. This retains fine correction resolution without losing the available turning range. Repeated gentle-left decisions continue to request +0.015 rad, rather than accumulating larger turns. For a returned score of 3.99 whose most probable steering level is 4, the target is exactly zero. A prior −0.20 rad command moves to −0.04 rad, then zero at the default 0.2-second interval and 0.8 rad/s rate limit.
 
-### Example answer and full command update
+## Choice mode
 
-The following is an **illustrative valid answer**, not a recorded JEV driving result. Both probability maps include all nine keys:
+Choice executes its returned, validated `choice` label, rather than a probability difference. `accelerate`, `hold` and `decelerate` request `+choice_speed_gain`, zero and `−choice_speed_gain`. `left`, `straight` and `right` request absolute steering targets `+choice_steering_gain`, zero and `−choice_steering_gain`.
 
-```json
-{
-  "answers": {
-    "speed": {
-      "type": "score",
-      "score": 7.5,
-      "probabilities": {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0.5, "8": 0.5}
-    },
-    "steering": {
-      "type": "score",
-      "score": 5.0,
-      "probabilities": {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5": 1, "6": 0, "7": 0, "8": 0}
-    }
-  }
-}
-```
+Default gains are 1 m/s and 0.06 rad. The same rate limits apply. Straight explicitly returns the steering reference toward zero in both modes.
 
-Start with target speed **10.0 m/s**, steering command **0.020 rad**, and a **0.2-second** decision interval:
+## Initialization and limits
 
-| Stage | Speed | Steering |
-|---|---|---|
-| JEV score | 7.5 | 5.0 |
-| Raw increment | `(7.5 − 4) × 0.25 = +0.875 m/s` | `(5 − 4) × 0.015 = +0.015 rad` |
-| Rate-limited increment | `+0.600 m/s` | `+0.015 rad` |
-| Updated command | **10.600 m/s** | **0.035 rad** |
+The initial command speed equals measured forward speed, **including speeds above the configured cap**. Initial steering is estimated from measured yaw rate and that same actual speed. Negative initial longitudinal speed is unsupported and rejected.
 
-The updated target is based on the **previous target**, not added to measured speed. Likewise, the steering increment is added to the previous reference command. A zero increment preserves that command.
+Normal speed commands use the configured acceleration/deceleration and speed bounds. If the initial target exceeds the cap, it is brought down gradually at the configured deceleration rate; the command can temporarily remain above the cap during this recovery. This is necessary to avoid an instantaneous speed discontinuity.
 
-[score_control.py](../src/jev_drive/control/score_control.py) uses the returned `score` directly after validation. The probability-weighted mean is logged as a diagnostic, not substituted for the score. Score probability sums may differ from 1 by at most 0.01 to accommodate rounded responses; only the diagnostic mean is normalized, and the original sum and raw response are logged. Choice retains the stricter 0.0001 sum tolerance. `confidence`, when present, is validated but does not scale or gate the control update.
+For a 31.23 m/s start, 15 m/s cap and 3 m/s² deceleration limit, the first 0.2-second update is **30.63 m/s**, not 15 m/s. Steering targets are also subject to absolute-angle and rate limits.
 
-## 3. Apply rate limits, then absolute limits
+## Reference trajectory and execution
 
-[limits.py](../src/jev_drive/control/limits.py) applies the same rules to Score and Choice answers:
+The four-second reference starts at **measured speed** and ramps toward the updated target under the configured acceleration limits. Distance is the integral of that speed profile. The bicycle model maps distance to position and heading using constant reference curvature `tan(steering) / wheelbase`; references are regenerated every 0.2 seconds.
 
-```text
-dv = clip(raw_delta_speed, -max_deceleration × dt, max_acceleration × dt)
-ds = clip(raw_delta_steering, -max_steering_rate × dt, max_steering_rate × dt)
+The command and reference limits do not mathematically guarantee identical limits on the vehicle's measured acceleration: MPC tracking and vehicle dynamics can differ. Native-controller regression tests cover the high-speed-start case, in addition to analytic command/reference checks.
 
-next_target_speed = clip(previous_target_speed + dv, min_speed, max_speed)
-next_steering     = clip(previous_steering + ds, -max_abs_steering, max_abs_steering)
-```
+## Audit and compatibility
 
-| Default bound | Value |
-|---|---|
-| Target acceleration/deceleration rate | ±3 m/s² → at most ±0.6 m/s per 0.2-second decision |
-| Steering-command rate | ±0.8 rad/s → at most ±0.16 rad per decision |
-| Target speed | 0–15 m/s |
-| Reference steering command | −0.4 to +0.4 rad |
+`decisions.jsonl` retains `raw_response`, `score_diagnostics.selected_level`, `control_before`, `increments.requested_steering_target_rad`, `control`, and the trajectory's speed profile. Outcome events record actual simulated motion. Identical duplicate requests are cached, so their actions are not applied twice.
 
-Thus the +0.875 m/s proposal above becomes +0.6 m/s. If the previous target were 14.8 m/s, the final target would be 15.0 m/s: an actual command increase of only 0.2 m/s. With default Score gains, steering proposals are already within the rate bound; the limiter still applies when gains or the decision interval change.
+This changes the control contract from v1.4. Old rollout responses must not be replayed as v1.5 decisions; recovery checks prompt versions before using seed answers. Old experiments and GIFs remain historical records, not evidence for the corrected controller.
 
-These are **command constraints**, not a guarantee that the simulated car's physical acceleration or steering exactly follows them. Actual motion comes from MPC and dynamics.
-
-## 4. Alternative Choice mode
-
-`configs/choice.json` asks for speed choices `accelerate / hold / decelerate` and steering choices `left / straight / right`. [choice_control.py](../src/jev_drive/control/choice_control.py) uses the **probability differences**, not just the winning label:
-
-```text
-raw_delta_speed    = choice_speed_gain    × (P(accelerate) - P(decelerate))
-raw_delta_steering = choice_steering_gain × (P(left)       - P(right))
-
-Default gains: 1.0 m/s and 0.06 rad.
-```
-
-For speed probabilities `(0.7, 0.2, 0.1)`, the increment is `+0.6 m/s`. For steering probabilities `(0.6, 0.3, 0.1)`, it is `+0.03 rad`. These then pass through the same limits. The `hold` and `straight` terms contribute zero to the difference; `straight` does not explicitly reset an existing steering command to zero.
-
-## 5. Turn the command into a trajectory for MPC
-
-[trajectory.py](../src/jev_drive/control/trajectory.py) uses updated target speed `v`, reference steering angle `δ` and wheelbase `L` (default **2.85 m**) to build a constant-curvature reference:
-
-```text
-R = L / tan(δ)
-heading(t) = v × t / R
-x(t) = R × sin(heading(t))
-y(t) = R × (1 - cos(heading(t)))
-```
-
-Coordinates are ego-relative: +x forward, +y left. For near-zero steering (`|δ| < 0.001 rad`), the reference is straight: `x = v × t`, `y = 0`. Target speeds at or below 0.1 m/s are treated as zero for trajectory generation.
-
-By default, the reference covers **4 seconds at 10 Hz**: 40 future poses. [The driver](../src/jev_drive/integration/driver_service.py) transforms them to world coordinates and prepends the current pose, returning 41 timestamped poses through gRPC. AlpaSim executes the next 0.2-second interval before the next JEV decision replaces the reference. JEV does not directly output throttle, brake or a guaranteed next vehicle pose.
-
-## 6. State and validation
-
-On the first decision, [ControlState.initialize](../src/jev_drive/control/control_state.py) initializes the target from ego speed clipped to the target bounds. It estimates reference steering from yaw rate using `atan(L × yaw_rate / target_speed)` when target speed exceeds 0.25 m/s, otherwise zero, then applies angle bounds. Subsequent updates reuse the session's previous commands.
-
-Answer types, probability keys, finite numbers, probability bounds/sums and score ranges are validated. Choice labels must agree with a maximum-probability option. Invalid answers fail the rollout; there is no substitute policy. An identical duplicate request reuses the cached result, so an increment is not applied twice.
-
-To inspect the conversion, read `raw_response`, `control_before`, `increments`, `control` and `trajectory` in a decision event in `decisions.jsonl`. These record the model answer, raw/rate-limited/applied changes, final command and reference. `outcome` events record the actual simulated motion.
-
-Return to the [five-module workflow](full-workflow.md) or inspect the [BEV input guide](bev-state-guide.md).
-
-The optional `api_503_retries` setting (default `0`, maximum `10`) retries a temporary HTTP 503 with the identical request while simulation time is paused. It honors `Retry-After` or uses the configured backoff. The limit applies per decision, including when 429 responses occur between 503 responses; exhausting it fails the rollout.
-
-Map polylines are serialized to millimetre precision to limit input size; raw scene snapshots retain their original precision.
-
-[Current input corrections (v1.4)](input-facts.md): raw lane attributes, shoulder exclusion, map areas, traffic-control links and observation limits.
+See [recovery and coverage](recovery.md), [road navigation](navigation.md) and [structured input facts](input-facts.md).

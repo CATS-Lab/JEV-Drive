@@ -1,13 +1,16 @@
 """Versioned prompt definitions; no precomputed maneuver recommendations."""
 
-VERSION = "jev-drive-v1.4"
+VERSION = "jev-drive-v1.5"
 COMMON = (
     "Control an ego vehicle in a synchronous driving simulation using the structured state. "
     "Coordinates are ego rig +x forward, +y left. Follow navigation, remain on drivable roads, "
     "avoid collisions, and comply with provided traffic-control facts. Unknown signal phases "
     "are unknown, not green. Reason yourself from lane geometry and actors; no maneuver labels "
-    "are provided. Your update applies once for decision_dt_s, with the supplied rate and absolute "
-    "limits, then a constant-curvature 4-second reference is tracked by an MPC. "
+    "are provided. Your speed update applies once for decision_dt_s. Steering selects a new absolute "
+    "reference angle, not an increment added repeatedly. Rate limits apply to both commands. "
+    "A constant-curvature 4-second reference starts from measured speed and ramps toward "
+    "the speed target within acceleration limits before MPC tracking. If initial speed exceeds "
+    "the configured cap, recover gradually without an instantaneous speed jump. "
     "Within each lane's centerline_segments, points run in that lane's direction of travel; "
     "use the local tangent between consecutive points to interpret its direction on curves. "
     "Lane left/right boundaries and neighbors are relative to that direction, not ego heading. "
@@ -59,43 +62,74 @@ COMMON = (
 )
 
 
+SPEED_LEVELS = [
+    "Brake as strongly as allowed: an imminent collision or road departure requires urgent speed reduction.",
+    "Brake firmly: a rapidly closing gap, nearby stopping requirement or tight bend leaves little margin.",
+    "Reduce speed moderately: approaching traffic, a bend or narrowing usable road requires more clearance.",
+    "Ease off gently: modest excess speed or slowly reducing clearance calls for a small slowdown.",
+    "Maintain the current target speed: it is appropriate for the visible road, traffic and stopping distance.",
+    "Increase speed gently: there is clear safe space and only a small increase is appropriate.",
+    "Increase speed moderately: an open same-direction lane and sufficient braking clearance support progress.",
+    "Accelerate firmly: substantially below a suitable speed on a clear, aligned road with ample clearance.",
+    "Accelerate as strongly as allowed: very low speed on a clearly open, aligned road with no nearby conflict.",
+]
+STEERING_LEVELS = [
+    "Command strong right steering: a sharp right bend or large leftward path error requires a large rightward correction within usable roadway.",
+    "Command firm right steering: a pronounced right bend or substantial leftward path error requires a clear rightward correction.",
+    "Command moderate right steering: a right bend or leftward path error requires a moderate correction toward safe road space.",
+    "Command gentle right steering: a broad right bend or small leftward path error needs only a slight rightward correction.",
+    "Command straight ahead with zero reference steering: the current heading already points along a safe continuation; unwind any previous turning command.",
+    "Command gentle left steering: a broad left bend or small rightward path error needs only a slight leftward correction.",
+    "Command moderate left steering: a left bend or rightward path error requires a moderate correction toward safe road space.",
+    "Command firm left steering: a pronounced left bend or substantial rightward path error requires a clear leftward correction.",
+    "Command strong left steering: a sharp left bend or large rightward path error requires a large leftward correction within usable roadway.",
+]
+
+
 def build(config):
+    speed_instruction = COMMON + (
+        "Select the speed action appropriate to the current scene. The highest-probability "
+        "description is executed, not the probability-weighted average. Deceleration must "
+        "be sufficient for visible hazards; acceleration requires a clear safe continuation."
+    )
+    steering_instruction = COMMON + (
+        "Select the absolute reference steering appropriate to the upcoming motion. "
+        "Positive steering turns left; negative turns right. This is a new steering target, "
+        "not an increment. Straight means return the reference steering to zero under rate "
+        "limits; it does not mean hold an existing turn. Consider heading and position "
+        "relative to lane geometry. The highest-probability description is executed. "
+        "If turning cannot avoid a hazard safely, also choose adequate braking."
+    )
     if config.mode == "score":
         return {
             "speed": {
                 "type": "score",
-                "instructions": COMMON
-                + "What signed target-speed increment should be applied now? Rate levels ordered from deceleration to acceleration. Level 4 is zero increment. The actual increment is rate-limited by acceleration * decision_dt_s.",
-                "criteria": [
-                    f"Change target speed by {(i-4)*config.speed_score_gain:+.3f} m/s before rate limits."
-                    for i in range(9)
-                ],
+                "instructions": speed_instruction,
+                "criteria": SPEED_LEVELS,
             },
             "steering": {
                 "type": "score",
-                "instructions": COMMON
-                + "What signed steering-command increment should be applied now? Positive is left and negative is right. The new command equals current commanded_steering_rad plus this increment; level 4 makes no change.",
-                "criteria": [
-                    f"Change steering command by {(i-4)*config.steering_score_gain:+.4f} radians before rate limits."
-                    for i in range(9)
-                ],
+                "instructions": steering_instruction,
+                "criteria": STEERING_LEVELS,
             },
         }
     return {
         "speed": {
             "type": "choice",
-            "instructions": COMMON
-            + f"Choose the speed update. We apply delta_v = {config.choice_speed_gain} * (P_accelerate - P_decelerate), then rate and absolute limits.",
+            "instructions": speed_instruction,
             "criteria": {
-                "accelerate": "Increase target speed.",
-                "hold": "Keep target speed.",
-                "decelerate": "Decrease target speed.",
+                "accelerate": "Increase target speed only when the road ahead and braking clearance are sufficient.",
+                "hold": "Maintain current target speed when appropriate for road geometry and traffic.",
+                "decelerate": "Reduce target speed for a hazard, stopping need, bend or insufficient clearance.",
             },
         },
         "steering": {
             "type": "choice",
-            "instructions": COMMON
-            + f"Choose left, straight, or right using current self-motion and scene. We apply delta_steering = {config.choice_steering_gain} * (P_left - P_right) to the current steering command, then rate and absolute limits.",
-            "criteria": {"left": "Left.", "straight": "Straight.", "right": "Right."},
+            "instructions": steering_instruction,
+            "criteria": {
+                "left": "Set a leftward reference steering target to follow a left bend or correct a rightward path error safely.",
+                "straight": "Set zero reference steering when current heading follows a safe continuation; unwind previous turning.",
+                "right": "Set a rightward reference steering target to follow a right bend or correct a leftward path error safely.",
+            },
         },
     }

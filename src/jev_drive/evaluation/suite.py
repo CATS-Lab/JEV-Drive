@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+from ..policy.questions import VERSION
 import subprocess
 import sys
 from .retries import run_scene, save
@@ -111,7 +112,7 @@ async def run_suite(args):
         "rewind_steps": 5,
         "max_retries_per_site": 3,
         "sample_interval_us": 50000,
-        "prompt_version": "jev-drive-v1.4",
+        "prompt_version": VERSION,
     }
     for scene in scenes:
         manifest["scenes"].append(

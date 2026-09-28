@@ -2,13 +2,13 @@
 
 [English](README.md) | 简体中文
 
-JEV-Drive 使用 TypeSafe 的 [JEV](https://docs.typesafe.ai/introduction)，在 NVIDIA 的 [AlpaSim](https://github.com/NVlabs/alpasim) 中控制自车。JEV 读取结构化的自车、车道、周边对象、导航和交通控制信息，选择速度与转向变化；AlpaSim 的 MPC 和车辆动力学执行由此生成的参考轨迹。
+JEV-Drive 使用 TypeSafe 的 [JEV](https://docs.typesafe.ai/introduction)，在 NVIDIA 的 [AlpaSim](https://github.com/NVlabs/alpasim) 中控制自车。JEV 读取结构化的自车、车道、周边对象、导航和交通控制信息，选择速度更新和绝对转角目标；AlpaSim 的 MPC 和车辆动力学执行由此生成的参考轨迹。
 
 **结构化场景状态 → JEV 决策 → 受约束控制 → AlpaSim 运动 → 下一次观测。**
 
 默认使用 [JEV 官方 API](https://docs.typesafe.ai/introduction/quickstart)，模型为 `jev-latest`。策略输入来自结构化仿真状态，不使用 Alpamayo 驾驶模型。
 
-导航现使用[地图生成的道路走廊](docs/navigation.zh-CN.md)，不输入中间 GT 路径点。下方示例 rollout 录制于此次修改之前。
+导航现使用[地图生成的道路走廊](docs/navigation.zh-CN.md)，不输入中间 GT 路径点。下方示例 rollout 录制于此次修改及 v1.5 控制修正之前。
 
 ## 示例
 

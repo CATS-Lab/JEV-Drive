@@ -71,7 +71,7 @@ def make_client(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode,steering", [("score", 0.06), ("choice", 0.036)])
+@pytest.mark.parametrize("mode,steering", [("score", 0.16), ("choice", 0.06)])
 async def test_gateway_request_to_model_preserves_answers_and_metadata(
     make_client, tmp_path, mode, steering
 ):
@@ -217,7 +217,7 @@ async def test_optional_metadata_does_not_weaken_control_validation(
 
 
 @pytest.mark.asyncio
-async def test_reported_score_drives_control_and_difference_is_logged(
+async def test_modal_action_drives_control_and_score_difference_is_logged(
     make_client, tmp_path
 ):
     # Synthetic regression: the failed live run did not retain its raw response.
@@ -228,11 +228,12 @@ async def test_reported_score_drives_control_and_difference_is_logged(
     model.start("session")
     try:
         result = await model.predict(JevStateBuilder(Config()).build(snapshot()))
-        assert result["increments"]["raw_delta_speed"] == pytest.approx(0.1)
-        assert result["control"]["target_speed"] == pytest.approx(10.1)
+        assert result["increments"]["raw_delta_speed"] == pytest.approx(1.0)
+        assert result["control"]["target_speed"] == pytest.approx(10.6)
         assert result["score_diagnostics"]["speed"] == pytest.approx(
             {
                 "reported_score": 4.4,
+                "selected_level": 8,
                 "raw_probability_sum": 1.0,
                 "probability_weighted_mean": 8.0,
                 "reported_minus_mean": -3.6,

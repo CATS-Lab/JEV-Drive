@@ -1,9 +1,9 @@
-"""Probability-weighted updates with the specified choice labels."""
+"""Execute the selected Choice action; steering targets are absolute."""
 
 from .score_control import probabilities
 
 
-def increments(answers, config):
+def commands(answers, config):
     if any(answers[k]["type"] != "choice" for k in ("speed", "steering")):
         raise ValueError("expected choice answer")
     v = probabilities(answers["speed"], ["accelerate", "hold", "decelerate"])
@@ -13,6 +13,14 @@ def increments(answers, config):
         if selected not in p or p[selected] < max(p.values()) - 1e-6:
             raise ValueError("invalid selected choice")
     return (
-        (v["accelerate"] - v["decelerate"]) * config.choice_speed_gain,
-        (s["left"] - s["right"]) * config.choice_steering_gain,
+        {
+            "accelerate": config.choice_speed_gain,
+            "hold": 0.0,
+            "decelerate": -config.choice_speed_gain,
+        }[answers["speed"]["choice"]],
+        {
+            "left": config.choice_steering_gain,
+            "straight": 0.0,
+            "right": -config.choice_steering_gain,
+        }[answers["steering"]["choice"]],
     )

@@ -16,14 +16,16 @@ LIVE_PROBS = dict(
 
 
 @pytest.mark.asyncio
-async def test_live_rounded_score_keeps_reported_control_and_raw_response(tmp_path):
+async def test_live_rounded_score_selects_modal_action_and_preserves_raw_response(
+    tmp_path,
+):
     response = score_response()
     response["answers"]["speed"].update(score=4.16, probabilities=LIVE_PROBS)
     original = deepcopy(response)
     model = JevModel(Config(), FixedClient(response), DecisionLog(tmp_path))
     model.start("session")
     result = await model.predict(JevStateBuilder(Config()).build(snapshot()))
-    assert result["increments"]["raw_delta_speed"] == pytest.approx(0.04)
+    assert result["increments"]["raw_delta_speed"] == pytest.approx(0.0)
     assert result["raw_response"] == original
     assert result["score_diagnostics"]["speed"]["raw_probability_sum"] == pytest.approx(
         0.99

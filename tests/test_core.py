@@ -12,7 +12,7 @@ from jev_drive.state import actors, traffic_signals
 from jev_drive.control.control_state import ControlState
 from jev_drive.control.limits import apply
 from jev_drive.control.trajectory import generate
-from jev_drive.control.choice_control import increments
+from jev_drive.control.choice_control import commands
 from jev_drive.logging.decision_log import DecisionLog
 from jev_drive.policy.jev_model import JevModel
 
@@ -112,7 +112,7 @@ def test_constant_curvature_sign_and_heading():
     assert left["times_s"][0] == 0.1 and left["times_s"][-1] == 4.0
 
 
-def test_choice_executes_probability_difference():
+def test_choice_executes_selected_action_and_absolute_steering():
     a = {
         "speed": {
             "type": "choice",
@@ -127,10 +127,10 @@ def test_choice_executes_probability_difference():
             "confidence": 0.5,
         },
     }
-    dv, ds = increments(a, Config(mode="choice"))
-    assert dv == pytest.approx(0.6) and ds == 0
-    state, _ = apply(ControlState(5.0, 0.15), dv, ds, 0.2, Config())
-    assert state.steering_angle == 0.15
+    dv, target = commands(a, Config(mode="choice"))
+    assert dv == pytest.approx(1.0) and target == 0
+    state, _ = apply(ControlState(5.0, 0.15), dv, target - 0.15, 0.2, Config())
+    assert state.steering_angle == 0.0
 
 
 def test_actor_rotation_relative_velocity_and_lane_association():

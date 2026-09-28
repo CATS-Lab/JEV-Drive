@@ -74,8 +74,10 @@ class JevModel:
             raw = await self.client.decide(state, questions(self.config))
             latency = time.perf_counter() - started
             mapping = score_control if self.config.mode == "score" else choice_control
-            dv, ds = mapping.increments(raw["answers"], self.config)
+            dv, steering_target = mapping.commands(raw["answers"], self.config)
+            ds = steering_target - control.steering_angle
             updated, changes = limits.apply(control, dv, ds, dt, self.config)
+            changes["requested_steering_target_rad"] = steering_target
             result = {
                 **metadata,
                 "event": "decision",
@@ -99,7 +101,9 @@ class JevModel:
                 ),
                 "api_latency_s": latency,
                 "decision_dt_s": dt,
-                "trajectory": trajectory.generate(updated, self.config),
+                "trajectory": trajectory.generate(
+                    updated, self.config, initial_speed=state["ego"]["speed_mps"]
+                ),
                 "config": self.config.as_dict(),
             }
             self.logger.write(result)
