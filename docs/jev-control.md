@@ -24,6 +24,8 @@ The shared instructions tell JEV to follow the route, stay on drivable roads, av
 
 Prompt version `jev-drive-v1.1` explains that consecutive centerline points follow each lane's travel direction, including on curves; lane left/right is relative to that direction. It prohibits wrong-way driving and requires the entire vehicle footprint to remain inside the drivable roadway. Shared lane boundaries may be crossed only for a safe, legal change to a same-direction lane. Lane edges are distinct from physical road edges: the current input has no separate road-edge map, and the native adapter does not populate marking types (they remain `unknown`). Missing neighbors or ROI clipping endpoints do not prove an outer road edge; unknown markings do not grant crossing permission. When safe continuation is uncertain, JEV is asked to slow or stop. Navigation cannot override these rules. These are textual requirements, not a geometric safety override; existing rollout examples predate this prompt change.
 
+Prompt `jev-drive-v1.2` replaces GT route geometry with [road-level navigation](navigation.md); lane choice and maneuver timing remain JEV decisions.
+
 [questions.py](../src/jev_drive/policy/questions.py) constructs the exact instructions and criteria. The questions ask JEV to consider both axes, but their answers are separate judgments against the same state; one answer is not fed into the other question.
 
 ## 2. Default Score mode: a numerical control rubric
@@ -150,4 +152,4 @@ Return to the [five-module workflow](full-workflow.md) or inspect the [BEV input
 
 The optional `api_503_retries` setting (default `0`, maximum `10`) retries a temporary HTTP 503 with the identical request while simulation time is paused. It honors `Retry-After` or uses the configured backoff. The limit applies per decision, including when 429 responses occur between 503 responses; exhausting it fails the rollout.
 
-Map polylines (including navigation) are serialized to millimetre precision to limit input size; raw scene snapshots retain their original precision.
+Map polylines are serialized to millimetre precision to limit input size; raw scene snapshots retain their original precision.

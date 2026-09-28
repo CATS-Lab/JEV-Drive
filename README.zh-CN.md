@@ -8,6 +8,8 @@ JEV-Drive 使用 TypeSafe 的 [JEV](https://docs.typesafe.ai/introduction)，在
 
 默认使用 [JEV 官方 API](https://docs.typesafe.ai/introduction/quickstart)，模型为 `jev-latest`。策略输入来自结构化仿真状态，不使用 Alpamayo 驾驶模型。
 
+导航现使用[地图生成的道路走廊](docs/navigation.zh-CN.md)，不输入中间 GT 路径点。下方示例 rollout 录制于此次修改之前。
+
 ## 示例
 
 同一场景、相同时间点：JEV Score 阶段性运行中的 **93 个决策帧，首末相隔 18.4 秒**，使用 [开发客户端](docs/local-development.zh-CN.md) 录制。**同向 4 车道，沿行驶方向从左到右编号 L1–L4**。GT 是原始记录轨迹，行驶过程为 **L3 → L2 → L3**；JEV 后续进入 L4，并继续偏出地图车道范围。这次运行在第 94 步因响应校验终止，当时尚未加入概率舍入容差修复。

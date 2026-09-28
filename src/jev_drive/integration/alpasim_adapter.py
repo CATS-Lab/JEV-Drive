@@ -245,11 +245,12 @@ class AlpasimAdapter:
                 v.aabb_z_offset_m + v.aabb_z_m / 2,
             ],
         }
-        if route_world is None:
-            route_world = rig.trajectory.positions.tolist()
-            route_source = "recorded_trip_route"
-        else:
-            route_source = "runtime_route"
+        # Only a destination is needed; never read intermediate recorded route points.
+        goal = self.config.navigation_destination_world_m
+        goal_source = "configured_destination"
+        if goal is None:
+            goal = rig.trajectory.positions[-1].tolist()
+            goal_source = "recorded_trip_endpoint_only"
         return SceneSnapshot(
             session_id,
             self.artifact.scene_id,
@@ -266,16 +267,18 @@ class AlpasimAdapter:
                 ),
                 timestamp_us,
             ),
-            route_world,
+            [],
             self.controls,
             {
                 "map": "available",
                 "actors": "simulation_ground_truth",
                 "ego": dynamics_source,
-                "route": route_source,
+                "route": "map_topology",
+                "navigation_goal": goal_source,
                 "signal_source": "artifact_geometry_and_optional_annotations",
                 "source_artifact": str(self.artifact.source),
             },
+            navigation_goal_world_m=list(goal),
         )
 
     def from_runtime(self, state, event):
@@ -286,9 +289,6 @@ class AlpasimAdapter:
         estimated = state.ego_trajectory_estimate.last_pose
         if not np.allclose(true.as_se3(), estimated.as_se3(), atol=1e-4):
             raise ValueError("v1 requires ego noise disabled")
-        if event.route_generator is None:
-            raise ValueError("JEV requires navigation route")
-        route = event.route_generator.route_polyline_in_local.points.tolist()
         dt = event.interval_us * 1e-6
         if abs(dt - self.config.decision_dt_s) > 1e-9:
             raise ValueError("decision interval mismatch")
@@ -326,7 +326,6 @@ class AlpasimAdapter:
             ego_pose=true,
             dynamics=dynamics,
             traffic_objects=state.traffic_objs,
-            route_world=route,
             vehicle_config=state.unbound.vehicle_config,
         )
         if estimated_after_warmup:

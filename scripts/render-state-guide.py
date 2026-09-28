@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Render documentation BEVs from saved, provider-independent structured states."""
+"""Render historical documentation BEVs from saved pre-corridor states.
+
+The navigation panel describes the archived GT-route input, not the current
+road-corridor interface; see docs/navigation.md for the current contract.
+"""
 
 import argparse
 import json

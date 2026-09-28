@@ -8,6 +8,8 @@ JEV-Drive uses TypeSafe's [JEV](https://docs.typesafe.ai/introduction) to drive 
 
 The default client uses the [official JEV API](https://docs.typesafe.ai/introduction/quickstart) (`jev-latest`). Policy input comes from structured simulator state; this project does not use the Alpamayo driving model.
 
+Navigation now uses [map-derived road corridors](docs/navigation.md), not intermediate GT waypoints. The example rollouts below were recorded before this change.
+
 ## Examples
 
 Same scene and timestamps: **93 decision frames spanning 18.4 s** from a partial JEV Score rollout, recorded with the [development client](docs/local-development.md). Four same-direction lanes are labeled **L1–L4, left to right**. GT follows the original recorded trajectory: **L3 → L2 → L3**; JEV later moves into L4 and drifts outside the mapped lanes. This run stopped at decision 94 on response validation, before the probability-rounding fix.

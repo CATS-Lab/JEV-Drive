@@ -36,9 +36,18 @@ def render(event, path):
         xy = box_points(x, y, h, length, width)
         ax.add_patch(Polygon(np.c_[-xy[:, 1], xy[:, 0]], color=color, alpha=0.8))
 
+    corridor_lanes = {
+        key
+        for corridor in state["navigation"].get("corridors", [])
+        for key in corridor["lane_ids"]
+    }
     for lane in state["road"]["lanes"]:
         for segment in lane["centerline_segments"]:
-            line(segment, color="gray", linewidth=0.7)
+            line(
+                segment,
+                color="#3286ce" if lane["id"] in corridor_lanes else "gray",
+                linewidth=0.7,
+            )
         for side in ("left_boundary", "right_boundary"):
             for segment in lane[side]["segments"]:
                 line(
@@ -47,7 +56,7 @@ def render(event, path):
                     linewidth=0.5,
                     linestyle="--" if lane[side]["type"] == "dashed" else "-",
                 )
-    for segment in state["navigation"]["route_segments"]:
+    for segment in state["navigation"].get("route_segments", []):
         line(segment, color="#3286ce", linewidth=1.5, alpha=0.7)
     for item in state["traffic_controls"]["stop_lines"]:
         for segment in item["segments"]:

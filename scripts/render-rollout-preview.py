@@ -154,7 +154,7 @@ def draw(ax, i, detail=True):
                 for seg in lane[side]["segments"]:
                     line(ax, bg, seg, color="#e2e5e9", lw=0.45, zorder=1)
     for bg in background:
-        for seg in bg["state"]["navigation"]["route_segments"]:
+        for seg in bg["state"]["navigation"].get("route_segments", []):
             line(ax, bg, seg, color="#228be6", lw=1.4, label=None, zorder=2)
     for a in s["actors"]:
         vehicle(

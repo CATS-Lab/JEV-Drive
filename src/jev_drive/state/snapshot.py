@@ -16,6 +16,7 @@ class SceneSnapshot:
     route_world: list
     traffic_controls: dict
     provenance: dict
+    navigation_goal_world_m: list | None = None
 
     def as_dict(self):
         return asdict(self)

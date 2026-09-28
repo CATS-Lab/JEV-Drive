@@ -32,11 +32,7 @@ The default actor crop is `[-30, 80, -20, 20]`; at most the nearest 16 objects a
 
 ## 04. Navigation route
 
-R0, R4, R8, R12 and R16 label actual indices in `route_segments[0]`. The blue curve is navigation input; it is not a JEV-generated reference trajectory.
-
-![Route samples and matching navigation array entries](images/state-04-navigation.png)
-
-Navigation uses the road ROI and preserves disconnected route pieces. `source` records provenance. Route intent can extend ahead without exposing future actor motion or signal observations. Builder: [navigation.py](../src/jev_drive/state/navigation.py).
+Navigation now supplies ordered groups of adjacent same-direction lane IDs, rather than a GT-derived route polyline. JEV chooses lanes and maneuver timing using the map and traffic. Only the trip endpoint is used as the default destination; intermediate GT waypoints are excluded. See [road-level navigation](navigation.md) for the input example, destination configuration and unavailable-map behavior.
 
 ## 05. Stop lines and signs
 

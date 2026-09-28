@@ -24,6 +24,7 @@ class Config:
     max_actors: int = 16
     actor_overlap_filter: bool = True
     centerline_spacing_m: float = 5.0
+    navigation_destination_world_m: tuple | None = None
     min_target_speed_mps: float = 0.0
     max_target_speed_mps: float = 15.0
     max_acceleration_mps2: float = 3.0
@@ -68,6 +69,12 @@ class Config:
             raise ValueError("endpoint must match the selected backend")
         if not isinstance(self.model, str) or not self.model.strip():
             raise ValueError("model must be a nonempty string")
+        if self.navigation_destination_world_m is not None:
+            goal = self.navigation_destination_world_m
+            if len(goal) != 3 or not all(math.isfinite(v) for v in goal):
+                raise ValueError(
+                    "navigation_destination_world_m requires finite world xyz"
+                )
         if self.mode not in {"score", "choice"}:
             raise ValueError("mode must be score or choice")
         for name in (

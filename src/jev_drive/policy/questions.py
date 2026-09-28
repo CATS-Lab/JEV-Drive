@@ -1,6 +1,6 @@
 """Versioned prompt definitions; no precomputed maneuver recommendations."""
 
-VERSION = "jev-drive-v1.1"
+VERSION = "jev-drive-v1.2"
 COMMON = (
     "Control an ego vehicle in a synchronous driving simulation using the structured state. "
     "Coordinates are ego rig +x forward, +y left. Follow navigation, remain on drivable roads, "
@@ -20,6 +20,12 @@ COMMON = (
     "The state supplies lane edges, not a separate physical road-edge map. Missing neighbors, "
     "missing geometry, and ROI clipping endpoints do not establish a physical road boundary "
     "or extra drivable space. If a safe continuation is uncertain, slow down or stop. "
+    "Navigation contains an ordered sequence of map-derived road corridors, each listing "
+    "same-direction lane IDs, not a target trajectory or a required lane-change schedule. "
+    "Choose your own lane and safe maneuver timing to reach successive corridors. Corridor "
+    "membership does not authorize crossing a lane marking. IDs outside the current road ROI "
+    "refer to map sections ahead, not missing obstacles. If navigation is unavailable, do not "
+    "invent a route; slow down or stop safely. "
     "Navigation does not override road boundaries, traffic direction, or collision avoidance. "
     "Use current physical speed and commanded steering/target speed. "
     "Choose the control update for this step, considering the other control axis. "
