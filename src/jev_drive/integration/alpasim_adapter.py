@@ -7,6 +7,7 @@ from zipfile import ZipFile
 import numpy as np
 from scipy.spatial.transform import Rotation
 from ..state.snapshot import SceneSnapshot
+from .map_facts import read_map_facts, enrich, entity_lane_links
 
 
 def pose_dict(pose):
@@ -103,6 +104,8 @@ def artifact_signals(path):
             rows = pq.read_table(BytesIO(z.read(filename))).to_pylist()
             records = {}
             for row in rows:
+                if not row["key"].get("map_id") or not row.get("traffic_light"):
+                    continue
                 light = row["traffic_light"]
                 center = light["center"]
                 quat = light["orientation"]
@@ -120,18 +123,19 @@ def artifact_signals(path):
                 associations = pq.read_table(
                     BytesIO(z.read(association_file))
                 ).to_pylist()
-                for association in associations:
-                    if association["key"]["kind"] != "LIGHT_TO_LANE":
-                        continue
-                    links = association["association"]
-                    for signal_id in links["subjects"]:
-                        if str(signal_id) in records:
-                            records[str(signal_id)]["lane_ids"] = sorted(
-                                set(
-                                    records[str(signal_id)]["lane_ids"]
-                                    + [str(x) for x in links["objects"]]
-                                )
-                            )
+                lane_file = directory + "/lane.parquet"
+                lane_ids = set()
+                if lane_file in z.namelist():
+                    lane_ids = {
+                        str(row["key"]["map_id"])
+                        for row in pq.read_table(BytesIO(z.read(lane_file))).to_pylist()
+                        if row["key"].get("map_id")
+                    }
+                links = entity_lane_links(
+                    associations, "LIGHT_TO_LANE", set(records), lane_ids
+                )
+                for key, value in links.items():
+                    records[key]["lane_ids"] = value
             return list(records.values()), "available"
     return [], "unavailable"
 
@@ -183,6 +187,8 @@ class AlpasimAdapter:
         signals, available = artifact_signals(artifact_path)
         self.controls["signals"] = signals
         self.controls["availability"]["signal_geometry"] = available
+        self.map_facts = read_map_facts(artifact_path)
+        enrich(self.lanes, self.controls, self.map_facts)
         if signal_annotations:
             doc = json.loads(Path(signal_annotations).read_text())
             if doc["scene_id"] != self.artifact.scene_id:
@@ -285,6 +291,8 @@ class AlpasimAdapter:
             },
             navigation_goal_world_m=list(goal),
             road_edges=self.road_edges,
+            map_areas=self.map_facts["areas"],
+            available_area_layers=self.map_facts["available_layers"],
         )
 
     def from_runtime(self, state, event):

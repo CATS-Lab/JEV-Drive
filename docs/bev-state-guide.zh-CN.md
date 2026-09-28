@@ -84,3 +84,5 @@ python scripts/render-state-guide.py --language zh-CN
 输入如何进入策略和仿真器见 [JEV-Drive 实现流程](full-workflow.zh-CN.md)。
 
 源目标框的重叠可在模型输入前过滤，详见[目标过滤与离线对比](actor-filter.zh-CN.md)。
+
+[当前输入修正（v1.4）](input-facts.zh-CN.md)：原始车道属性、路肩排除、区域几何、交通控制关联与观测范围。

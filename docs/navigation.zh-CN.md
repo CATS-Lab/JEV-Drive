@@ -29,3 +29,5 @@ JEV 接收按顺序排列的**道路走廊**，每组列出相邻同向车道的
 缺少目的地、位置无法匹配或道路不连通时，返回 `availability: "unavailable"` 和原因。提示词要求安全减速或停车，不会回退到 GT 路径，也没有自动安全接管。这是在现有场景地图内导航，不是城市级导航服务。新快照的旧字段 `route_world` 为空，目的地单独保存；兼容旧快照时最多读取其路线终点。
 
 导航实现独立放在 [navigation.py](../src/jev_drive/state/navigation.py)。提示词 `jev-drive-v1.2` 对 Score 和 Choice 都说明了道路组语义。现有 rollout GIF 和决策日志均早于此修改，不能用于证明新导航的驾驶效果。
+
+[当前输入修正（v1.4）](input-facts.zh-CN.md)：原始车道属性、路肩排除、区域几何、交通控制关联与观测范围。

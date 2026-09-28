@@ -6,6 +6,9 @@ from .snapshot import SceneSnapshot
 def build(snapshot: SceneSnapshot) -> dict:
     ego = snapshot.ego
     return {
+        "lateral_speed_mps": float(ego["velocity_rig_mps"][1]),
+        "lateral_acceleration_mps2": float(ego["acceleration_rig_mps2"][1]),
+        "motion_source": snapshot.provenance.get("ego", "unknown"),
         "speed_mps": float(ego["velocity_rig_mps"][0]),
         "acceleration_mps2": float(ego["acceleration_rig_mps2"][0]),
         "yaw_rate_radps": float(ego["angular_velocity_rig_radps"][2]),

@@ -29,3 +29,5 @@ The builder groups explicitly adjacent lanes whose local directions agree within
 Missing destinations, unmatched positions and disconnected routes produce `availability: "unavailable"` with a reason. The prompt asks JEV to slow or stop safely; there is no fallback to GT waypoints or automatic safety takeover. This is navigation on the available local scene map, not a city-scale routing service. New snapshots carry an empty legacy `route_world` and a separate destination; archived snapshots may supply only their final route point for compatibility.
 
 The navigation implementation is isolated in [navigation.py](../src/jev_drive/state/navigation.py). Prompt version `jev-drive-v1.2` explains corridor semantics for both Score and Choice. Existing rollout GIFs and decision logs predate this change and are not evidence of its driving performance.
+
+[Current input corrections (v1.4)](input-facts.md): raw lane attributes, shoulder exclusion, map areas, traffic-control links and observation limits.

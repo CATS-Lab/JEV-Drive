@@ -18,6 +18,8 @@ class SceneSnapshot:
     provenance: dict
     navigation_goal_world_m: list | None = None
     road_edges: list = field(default_factory=list)
+    map_areas: list = field(default_factory=list)
+    available_area_layers: list = field(default_factory=list)
 
     def as_dict(self):
         return asdict(self)

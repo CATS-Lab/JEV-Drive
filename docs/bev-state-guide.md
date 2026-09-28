@@ -86,3 +86,5 @@ python scripts/render-state-guide.py --language zh-CN
 Field names and data values stay unchanged between languages.
 
 Overlapping source actor boxes can be filtered before model input; see [actor filtering and offline comparisons](actor-filter.md).
+
+[Current input corrections (v1.4)](input-facts.md): raw lane attributes, shoulder exclusion, map areas, traffic-control links and observation limits.

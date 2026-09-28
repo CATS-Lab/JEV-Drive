@@ -38,7 +38,20 @@ def build(snapshot, config):
     }
     if goal is None:
         return {**result, "reason": "missing_destination"}
-    lanes = {str(lane["id"]): lane for lane in snapshot.lanes}
+    # Ordinary-car route planning excludes known shoulders and HOV lanes:
+    # HOV eligibility is not supplied in the current experiment.
+    excluded = {
+        str(lane["id"])
+        for lane in snapshot.lanes
+        if set(lane.get("source_attributes", {}).get("use_types") or [])
+        & {"SHOULDER_LANE", "HOV_LANE"}
+    }
+    result["excluded_lane_uses"] = ["SHOULDER_LANE", "HOV_LANE"]
+    lanes = {
+        str(lane["id"]): lane
+        for lane in snapshot.lanes
+        if str(lane["id"]) not in excluded
+    }
     lines = {
         key: LineString(np.asarray(lane["center_world"])[:, :2])
         for key, lane in lanes.items()

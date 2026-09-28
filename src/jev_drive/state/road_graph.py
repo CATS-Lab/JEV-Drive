@@ -1,7 +1,7 @@
 """Crop lane geometry, preserve disconnected pieces, and report topology facts."""
 
 from .snapshot import SceneSnapshot
-from . import road_boundaries
+from . import road_boundaries, map_areas, lane_attributes
 from ..config import Config
 
 
@@ -53,12 +53,19 @@ def build(snapshot: SceneSnapshot, config: Config) -> dict:
         )
         if not center:
             continue
-        item = {"id": str(lane["id"]), "centerline_segments": center}
+        item = {
+            "id": str(lane["id"]),
+            "centerline_segments": center,
+            "attributes": lane_attributes.build(lane, snapshot, config),
+        }
         for key in ("left_neighbors", "right_neighbors", "successors"):
             item[key] = sorted(str(x) for x in lane[key])
         for side in ("left", "right"):
             item[side + "_boundary"] = {
                 "type": lane.get(side + "_marking", "unknown"),
+                "source_samples": lane_attributes.markings(
+                    lane, side, snapshot, config
+                ),
                 "segments": clip_resample(
                     lane.get(side + "_edge_world", []),
                     snapshot.ego,
@@ -77,6 +84,7 @@ def build(snapshot: SceneSnapshot, config: Config) -> dict:
     return {
         "lanes": sorted(lanes, key=lambda lane: lane["id"]),
         "road_boundaries": road_boundaries.build(snapshot, config),
+        "map_areas": map_areas.build(snapshot, config),
         "roi_m": list(config.road_roi),
         "availability": snapshot.provenance.get("map", "available"),
     }

@@ -22,7 +22,7 @@ Every decision uses one request containing the same scene state and two named qu
 
 The shared instructions tell JEV to follow the route, stay on drivable roads, avoid collisions and interpret the supplied traffic-control facts. Unknown signal phases remain unknown. JEV also receives measured ego motion, `current_target_speed_mps`, `commanded_steering_rad`, `decision_dt_s` and `vehicle_constraints`. The builders do not select a maneuver in advance.
 
-Prompt `jev-drive-v1.3` explicitly prohibits wrong-way driving, crossing source road edges with any part of the ego vehicle, and collision or footprint overlap with actors. It asks JEV to consider dimensions, velocity and closing gaps, maintain braking clearance, and slow or stop before contact without assuming others will yield. These are textual requirements, not a safety override. `road.road_boundaries.edges` now carries original map RoadEdge polylines separately from lane dividers; clipping retains source vertices and does not invent ROI edges. These are open boundaries, not a closed drivable-area polygon or guaranteed map completeness. Lane-marking types still remain unknown. Earlier v1.2 experiments omitted this available source-map layer and have not been rerun with the correction.
+Prompt `jev-drive-v1.3` explicitly prohibits wrong-way driving, crossing source road edges with any part of the ego vehicle, and collision or footprint overlap with actors. It asks JEV to consider dimensions, velocity and closing gaps, maintain braking clearance, and slow or stop before contact without assuming others will yield. These are textual requirements, not a safety override. `road.road_boundaries.edges` now carries original map RoadEdge polylines separately from lane dividers; clipping retains source vertices and does not invent ROI edges. These are open boundaries, not a closed drivable-area polygon or guaranteed map completeness. Lane-marking styles and colors are now populated from raw source vertices in v1.4. Earlier v1.2 experiments omitted this available source-map layer and have not been rerun with the correction.
 
 Prompt `jev-drive-v1.2` replaces GT route geometry with [road-level navigation](navigation.md); lane choice and maneuver timing remain JEV decisions.
 
@@ -153,3 +153,5 @@ Return to the [five-module workflow](full-workflow.md) or inspect the [BEV input
 The optional `api_503_retries` setting (default `0`, maximum `10`) retries a temporary HTTP 503 with the identical request while simulation time is paused. It honors `Retry-After` or uses the configured backoff. The limit applies per decision, including when 429 responses occur between 503 responses; exhausting it fails the rollout.
 
 Map polylines are serialized to millimetre precision to limit input size; raw scene snapshots retain their original precision.
+
+[Current input corrections (v1.4)](input-facts.md): raw lane attributes, shoulder exclusion, map areas, traffic-control links and observation limits.

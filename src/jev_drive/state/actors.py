@@ -51,5 +51,7 @@ def build_with_audit(snapshot: SceneSnapshot, config: Config):
                 "width_m": float(a["dimensions_m"][1]),
             }
         )
+    audit["roi_candidate_count"] = len(candidates)
+    audit["omitted_by_nearest_k"] = max(0, len(candidates) - config.max_actors)
     audit["selected_ids"] = [a["id"] for a in result]
     return result, audit

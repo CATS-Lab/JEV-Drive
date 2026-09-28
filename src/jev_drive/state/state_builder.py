@@ -1,7 +1,7 @@
 """Compose separately testable state components without driving reasoning."""
 
 import base64
-from . import ego, road_graph, actors, navigation, traffic_controls
+from . import ego, road_graph, actors, navigation, traffic_controls, observation_scope
 from .schema import FRAME, finite
 
 
@@ -24,6 +24,7 @@ class JevStateBuilder:
                 "ego": ego.build(snapshot),
                 "road": road_graph.build(snapshot, self.config),
                 "actors": actor_state,
+                "observation_scope": observation_scope.build(self.config, actor_audit),
                 "navigation": navigation.build(snapshot, self.config),
                 "traffic_controls": traffic_controls.build(snapshot, self.config),
             },

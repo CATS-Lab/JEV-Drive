@@ -4,7 +4,7 @@ from .snapshot import SceneSnapshot
 from ..config import Config
 
 
-from .coordinates import points_to_ego, in_roi
+from .coordinates import points_to_ego, in_roi, heading_to_ego
 
 
 def build(snapshot: SceneSnapshot, config: Config) -> list:
@@ -19,6 +19,11 @@ def build(snapshot: SceneSnapshot, config: Config) -> list:
                     "source_category": sign["source_category"],
                     "lane_ids": sign.get("lane_ids", []),
                     "regulatory_value": sign.get("regulatory_value"),
+                    "heading_rad": (
+                        heading_to_ego(sign["quaternion_xyzw"], snapshot.ego)
+                        if sign.get("quaternion_xyzw")
+                        else None
+                    ),
                 }
             )
     return result
