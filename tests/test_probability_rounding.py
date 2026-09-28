@@ -25,7 +25,7 @@ async def test_live_rounded_score_uses_continuous_score_and_preserves_raw_respon
     model = JevModel(Config(), FixedClient(response), DecisionLog(tmp_path))
     model.start("session")
     result = await model.predict(JevStateBuilder(Config()).build(snapshot()))
-    assert result["increments"]["raw_delta_speed"] == pytest.approx(0.04)
+    assert result["increments"]["raw_delta_speed"] == pytest.approx(.06 * 4 / 3.9 * .25)
     assert result["raw_response"] == original
     assert result["score_diagnostics"]["speed"]["raw_probability_sum"] == pytest.approx(
         0.99

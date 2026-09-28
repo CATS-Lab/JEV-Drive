@@ -62,9 +62,9 @@ async def test_near_neutral_score_unwinds_and_does_not_integrate_bias(tmp_path):
         snap = replace(snapshot(), timestamp_us=1000000 + i * 200000, step_index=i)
         result = await model.predict(JevStateBuilder(Config()).build(snap))
         assert result["score_diagnostics"]["steering"]["control_score"] == 3.99
-        assert result["increments"]["requested_steering_target_rad"] == pytest.approx(-0.00015)
+        assert result["increments"]["requested_steering_target_rad"] == pytest.approx(0)
         assert result["control"]["steering_angle"] == pytest.approx(
-            -0.04 if i == 0 else -0.00015
+            -0.04 if i == 0 else 0
         )
 
 
@@ -78,7 +78,7 @@ async def test_repeated_direction_targets_do_not_accumulate(tmp_path):
                 replace(snapshot(), timestamp_us=1000000 + i * 200000, step_index=i)
             )
         )
-        assert result["control"]["steering_angle"] == pytest.approx(0.015)
+        assert result["control"]["steering_angle"] == pytest.approx(0.9 * 4 / 3.9 * .015)
 
 
 def test_tied_probabilities_use_continuous_score():
@@ -126,7 +126,7 @@ def test_absolute_steering_anchors_match_linear_score_mapping():
 
     targets = steering_targets(Config())
     assert targets == pytest.approx(
-        [-0.06, -0.045, -0.03, -0.015, 0, 0.015, 0.03, 0.045, 0.06]
+        [-0.06, -2.9*4/3.9*.015, -1.9*4/3.9*.015, -.9*4/3.9*.015, 0, .9*4/3.9*.015, 1.9*4/3.9*.015, 2.9*4/3.9*.015, 0.06]
     )
     state = ControlState(5, 0)
     for expected in [0.06, 0.06, 0.06, 0.06]:

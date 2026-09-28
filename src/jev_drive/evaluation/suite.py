@@ -83,13 +83,10 @@ def update(suite, manifest):
             lines.append(
                 f"| {item['tag']} | {report.get('status',item['status'])} | {percent('first_attempt_safe_time_coverage')} | {percent('best_branch_safe_time_coverage')} | {m.get('retries','—')} | {link} |"
             )
-            if "best_attempt" in m and m["best_attempt"] is not None:
-                attempt = out / f"attempt-{m['best_attempt']:02d}"
-                for gif in sorted(attempt.glob("previews/*/*-" + lang + ".gif")):
-                    lines.append("")
-                    lines.append(
-                        f"[{item['tag']} / {gif.parent.name}]({gif.relative_to(suite)})"
-                    )
+            for number, attempt_record in enumerate(report.get("attempts", [])):
+                attempt = Path(attempt_record["output"])
+                for media in sorted(attempt.glob("previews/*/*-" + lang + ".gif")) + sorted(attempt.glob("previews/status-" + lang + ".png")):
+                    lines.append(f"[{item['tag']} / attempt-{number:02d} / {media.parent.name}]({media.relative_to(suite)})")
         # Keep table rows contiguous; preview links belong after the table.
         table = [line for line in lines if line.startswith("|")]
         front = lines[: lines.index(table[0])]
@@ -147,28 +144,10 @@ async def run_suite(args):
                 item["artifact"], config, out, steps, seed_log=seed
             )
             item["status"] = result["status"]
-            if (
-                args.render_script
-                and result.get("metrics", {}).get("best_attempt") is not None
-            ):
-                best = out / f"attempt-{result['metrics']['best_attempt']:02d}"
-                from .retries import decisions
-
-                if decisions(best / "decisions.jsonl"):
-                    with (out / "preview.log").open("w") as log:
-                        process = await asyncio.create_subprocess_exec(
-                            sys.executable,
-                            args.render_script,
-                            "--run",
-                            str(best),
-                            "--artifact",
-                            item["artifact"],
-                            stdout=log,
-                            stderr=log,
-                        )
-                        item["preview_status"] = (
-                            "completed" if await process.wait() == 0 else "failed"
-                        )
+            if args.render_script:
+                from .previews import render_attempts
+                item["attempt_previews"] = await render_attempts(result, item["artifact"], args.render_script)
+                item["preview_status"] = "completed" if all(p["status"] == "completed" for p in item["attempt_previews"]) else "failed"
             if any(
                 any(
                     "JEV HTTP " + str(code) in str(a.get("error"))

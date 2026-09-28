@@ -2,7 +2,7 @@
 
 from ..control.action_mapping import speed_increments, steering_targets, choice_targets
 
-VERSION = "jev-drive-v1.7"
+VERSION = "jev-drive-v1.8"
 COMMON = (
     "Control an ego vehicle in a synchronous driving simulation using the structured state. "
     "Coordinates are ego rig +x forward, +y left. Follow navigation, remain on drivable roads, "
@@ -93,8 +93,8 @@ STEERING_LEVELS = [
 
 def build(config):
     selection = (
-        "The returned continuous score is mapped linearly to control using vehicle_constraints.control_mapping; "
-        "integer criteria are anchors and fractional scores produce intermediate commands. "
+        "The returned continuous score is mapped through a continuous neutral deadzone to control using vehicle_constraints.control_mapping; "
+        "integer criteria are anchors and fractional scores produce intermediate commands. Scores inside the neutral deadzone request zero speed increment and zero absolute steering, unwinding previous steering under rate limits. "
         if config.mode == "score" else "The returned validated choice label is executed. "
     )
     speed_instruction = COMMON + selection + (

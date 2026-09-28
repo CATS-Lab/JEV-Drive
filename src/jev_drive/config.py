@@ -32,6 +32,7 @@ class Config:
     max_abs_steering_rad: float = 0.4
     max_steering_rate_radps: float = 0.8
     wheelbase_m: float = 2.85
+    score_deadzone: float = 0.1
     speed_score_gain: float = 0.25
     steering_score_gain: float = 0.015
     choice_speed_gain: float = 1.0
@@ -54,6 +55,8 @@ class Config:
     )
 
     def __post_init__(self):
+        if isinstance(self.score_deadzone, bool) or not math.isfinite(self.score_deadzone) or not 0 <= self.score_deadzone < 4:
+            raise ValueError("score_deadzone must be finite in [0,4)")
         defaults = {
             "typesafe": ("jev-latest", "https://api.typesafe.ai/v1/systemone"),
             "vercel": ("typesafe-ai/jev", "https://ai-gateway.vercel.sh/v1/evaluate"),

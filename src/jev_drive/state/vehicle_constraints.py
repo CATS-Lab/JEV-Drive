@@ -19,11 +19,13 @@ def build(config):
         "selection": "Score: map the returned continuous score in [0,8], not the highest-probability level. Probability ties are valid. Choice: execute returned validated choice label.",
         "actions": ({"speed_delta_mps_by_level": speed_increments(config), "absolute_steering_rad_by_level": steering_targets(config)} if config.mode == "score" else choice_targets(config)),
         "score_mapping": {
+            "deadzone_half_width": config.score_deadzone,
+            "centered_score": "h(s)=0 if 4-w<=s<=4+w; otherwise h(s)=sign(s-4)*max(abs(s-4)-w,0)*4/(4-w), where w=deadzone_half_width. Continuous at both boundaries; h(0)=-4,h(8)=4.",
             "speed_score_gain_mps": config.speed_score_gain,
             "steering_score_gain_rad": config.steering_score_gain,
-            "speed": "dv_req=(answers.speed.score-4)*speed_score_gain_mps",
-            "steering": "delta_req=(answers.steering.score-4)*steering_score_gain_rad; absolute target, never add it to the previous steering command",
-            "score_source": "Use the API-reported score directly; the recomputed probability-weighted mean is diagnostic only. Integer action-table entries are anchors for this linear mapping before limits.",
+            "speed": "dv_req=h(answers.speed.score)*speed_score_gain_mps",
+            "steering": "delta_req=h(answers.steering.score)*steering_score_gain_rad; absolute target, never add it to the previous steering command",
+            "score_source": "Use the API-reported score directly; the recomputed probability-weighted mean is diagnostic only. Integer action-table entries are anchors for this continuous deadzone mapping before limits.",
         } if config.mode == "score" else None,
         "variables": "dt=decision_dt_s; v_old=ego.current_target_speed_mps; delta_old=ego.commanded_steering_rad; dv_req=selected speed increment; delta_req=selected absolute steering target; clip(x,lo,hi)=max(lo,min(hi,x)); a_up=max_acceleration_mps2; a_down=max_deceleration_mps2; rate=max_steering_rate_radps; v_min/min_target_speed_mps; v_max/max_target_speed_mps; delta_max/max_abs_steering_rad.",
         "speed_update": [

@@ -228,8 +228,8 @@ async def test_continuous_score_drives_control_and_score_difference_is_logged(
     model.start("session")
     try:
         result = await model.predict(JevStateBuilder(Config()).build(snapshot()))
-        assert result["increments"]["raw_delta_speed"] == pytest.approx(0.1)
-        assert result["control"]["target_speed"] == pytest.approx(10.1)
+        assert result["increments"]["raw_delta_speed"] == pytest.approx(.3 * 4 / 3.9 * .25)
+        assert result["control"]["target_speed"] == pytest.approx(10 + .3 * 4 / 3.9 * .25)
         assert result["score_diagnostics"]["speed"] == pytest.approx(
             {
                 "reported_score": 4.4,
