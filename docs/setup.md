@@ -108,3 +108,5 @@ PYTHONPATH=src python scripts/render-scene-previews.py \
 ```
 
 The script uses the AlpaSim Python environment and a Noto Sans CJK font at `/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc`. Both English and Chinese GIFs are saved under `previews/labeled-panorama-NNN/` and `previews/labeled-lanes-NNN/`. It matches GT and simulated poses at recorded decision timestamps. Stable colors and IDs connect only one-to-one map segments; new IDs at junction branches do not necessarily mean a lane change. Use `--views panorama` or `--views lanes` to regenerate one view.
+
+Panorama GIFs place GT above JEV, with the full width available to each view. Lane close-ups retain GT on the left and JEV on the right.

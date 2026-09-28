@@ -108,3 +108,5 @@ PYTHONPATH=src python scripts/render-scene-previews.py \
 ```
 
 使用 AlpaSim Python 环境，并安装字体 `/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc`。中英文 GIF 分别保存在 `previews/labeled-panorama-NNN/` 和 `previews/labeled-lanes-NNN/`，GT 与仿真姿态按实际决策时间戳对齐。固定颜色和编号只连接无分支的地图车道段；路口分叉处编号变化不一定代表换道。可用 `--views panorama` 或 `--views lanes` 单独重绘一种视角。
+
+全景 GIF 采用上方 GT、下方 JEV 的排列，让每个视角使用整幅宽度；车道近景仍为左侧 GT、右侧 JEV。

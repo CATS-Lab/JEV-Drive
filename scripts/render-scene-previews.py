@@ -219,9 +219,12 @@ for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
         for i, r in enumerate(rows):
             panorama = mode == "panorama"
             if panorama:
-                fig, axes = plt.subplots(1, 2, figsize=(12, 5.5))
+                panorama_height = max(
+                    7.5, 2 * 13.0 * (ymax - ymin) / (xmax - xmin) / 0.70
+                )
+                fig, axes = plt.subplots(2, 1, figsize=(14, panorama_height))
                 fig.subplots_adjust(
-                    left=0.05, right=0.985, bottom=0.17, top=0.82, wspace=0.08
+                    left=0.035, right=0.985, bottom=0.14, top=0.85, hspace=0.24
                 )
             else:
                 fig, axes = plt.subplots(1, 2, figsize=(11, 7.8))
@@ -411,6 +414,9 @@ metadata = {
     "source_artifact": str(args.artifact),
     "label_map": label_map,
 }
-for folder in [pan_dir, close_dir]:
+for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
+    if args.views not in ("both", mode):
+        continue
+    metadata["layout"] = "GT above JEV" if mode == "panorama" else "GT left, JEV right"
     (folder / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 (close_dir / "lane-associations.json").write_text(json.dumps(metrics, indent=2) + "\n")
