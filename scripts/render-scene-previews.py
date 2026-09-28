@@ -82,6 +82,7 @@ for log in (args.run / "rollouts").glob("*/*/rollout.asl"):
                 poses[t] = (pos, rot)
 # Include the actual detected failure pose, not just the preceding policy pose.
 # It is a visualization sample, not another JEV decision.
+last_decision_timestamp_us = rows[-1]["timestamp_us"]
 terminal_sample = False
 if (
     safety_failure
@@ -168,6 +169,36 @@ for lane in adapter.lanes:
             poly=poly,
         )
     )
+# Use exactly the corridor IDs supplied to JEV at each decision. Both panels
+# show this same navigation; GT is not independently routed for the overlay.
+navigation_frames = []
+for row in rows:
+    navigation = row["state"].get("navigation", {})
+    lane_ids = (
+        sorted(
+            {
+                str(lane_id)
+                for corridor in navigation.get("corridors", [])
+                for lane_id in corridor.get("lane_ids", [])
+            }
+        )
+        if navigation.get("availability") == "available"
+        else []
+    )
+    navigation_frames.append(
+        {
+            "timestamp_us": row["timestamp_us"],
+            "source_decision_timestamp_us": min(
+                row["timestamp_us"], last_decision_timestamp_us
+            ),
+            "availability": navigation.get("availability", "unavailable"),
+            "lane_ids": lane_ids,
+            "unmapped_lane_ids": sorted(set(lane_ids) - set(by_id)),
+        }
+    )
+NAVIGATION_GRAY = "#555b63"
+NAVIGATION_ALPHA = 0.38
+
 font = FontProperties(fname="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
 preview = args.run / "previews"
 pan_dir = preview / f"labeled-panorama-{len(rows):03d}"
@@ -276,6 +307,10 @@ for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
                     else "Each view follows its ego; forward is up"
                 )
             )
+            if navigation_frames[i]["availability"] != "available":
+                subtitle += (
+                    " | 导航不可用" if lang == "zh" else " | Navigation unavailable"
+                )
             fig.text(
                 0.5, 0.895, subtitle, ha="center", fontproperties=font, fontsize=10
             )
@@ -290,6 +325,7 @@ for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
 
                 bounds = (xmin, xmax, ymin, ymax) if panorama else (-14, 14, -7, 23)
                 annotations = {}
+                navigation_lane_ids = set(navigation_frames[i]["lane_ids"])
                 for g in geometry:
                     cp = transform(g["center"])
                     if (
@@ -307,6 +343,17 @@ for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
                                 poly, fc=colors[label], ec="none", alpha=0.8, zorder=0
                             )
                         )
+                        if str(g["id"]) in navigation_lane_ids:
+                            ax.add_patch(
+                                Polygon(
+                                    poly,
+                                    fc=NAVIGATION_GRAY,
+                                    ec=NAVIGATION_GRAY,
+                                    alpha=NAVIGATION_ALPHA,
+                                    lw=1.2,
+                                    zorder=1,
+                                )
+                            )
                     ax.plot(cp[:, 0], cp[:, 1], color="#758596", ls="--", lw=0.6)
                     for edge in [g["left"], g["right"]]:
                         if len(edge) > 1:
@@ -412,9 +459,9 @@ for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
                 ax.set_aspect("equal")
                 ax.axis("off")
             footer = (
-                "编号和颜色对应无分支连接的车道段；路口分叉处重新编号，编号改变不一定代表换道\n绿色：自车　红色：交通车辆　红色轮廓：自车跨地图边界　青色：已行驶轨迹\n道路类型未确认；地图边界不代表实际标线类型。"
+                "编号和颜色对应无分支连接的车道段；路口分叉处重新编号，编号改变不一定代表换道\n绿色：自车　红色：交通车辆　红色轮廓：自车跨地图边界　青色：已行驶轨迹\n灰色半透明区域：JEV 道路级导航（两图相同）；普通车道边界不等于道路外缘。"
                 if lang == "zh"
-                else "Stable IDs/colors join one-to-one lane segments; IDs change at branches, not necessarily lane changes\nGreen: ego | Red: traffic | Red ego outline: mapped boundary overlap | Teal: driven path\nRoad classification unverified; map edges do not identify painted marking types."
+                else "Stable IDs/colors join one-to-one lane segments; IDs change at branches, not necessarily lane changes\nGreen: ego | Red: traffic | Red ego outline: mapped boundary overlap | Teal: driven path\nTranslucent gray: JEV road-corridor navigation (same in both views); lane edges are not road edges."
             )
             fig.text(
                 0.5,
@@ -445,6 +492,14 @@ metadata = {
     "labels": "One-to-one map-lane chains; new IDs at branches, not necessarily lane changes",
     "source_artifact": str(args.artifact),
     "label_map": label_map,
+    "navigation_overlay": {
+        "source": "logged JEV state.navigation.corridors[].lane_ids",
+        "scope": "same JEV navigation in GT and JEV panels; lane areas, not a target trajectory",
+        "color": NAVIGATION_GRAY,
+        "alpha": NAVIGATION_ALPHA,
+        "terminal_frame": "holds the last decision navigation",
+        "frames": navigation_frames,
+    },
 }
 for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
     if args.views not in ("both", mode):

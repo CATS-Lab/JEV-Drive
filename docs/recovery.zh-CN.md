@@ -34,6 +34,6 @@ scripts/jev-drive --config configs/default.json retry-scene \
 - **道路走廊访问比例**：通过检查的采样中，自车中心访问过的初始导航走廊数，占初始规划走廊数的比例。不是路线距离覆盖率，也不表示到达目的地。
 - **距离、静止比例、无法匹配车道的采样数、新决策请求数和缓存重放数**：每次尝试分别保留，用于区分原地停住和实际推进。
 
-每次尝试保留决策、回答来源、采样检查、控制器轨迹和原生日志。使用 `scripts/render-scene-previews.py --run <attempt-directory> --artifact "$JEV_ARTIFACT"` 生成全景和车道 GIF。全景为 GT 在上、JEV 在下；可用时纳入检测到失败的末端姿态。不要将失败分支拼接成一条成功轨迹。
+每次尝试保留决策、回答来源、采样检查、控制器轨迹和原生日志。使用 `scripts/render-scene-previews.py --run <attempt-directory> --artifact "$JEV_ARTIFACT"` 生成全景和车道 GIF。半透明灰色区域标出该次决策实际提供给 JEV 的道路级导航车道，两图显示同一份导航；表示导航区域，不是精确目标轨迹。末端失败帧沿用最后一次决策的导航。全景为 GT 在上、JEV 在下；可用时纳入检测到失败的末端姿态。不要将失败分支拼接成一条成功轨迹。
 
 多个固定场景可以在已配置的 Python/AlpaSim 环境中运行 `python -m jev_drive.evaluation.suite --manifest scenes.json --config configs/default.json --output outputs/recovery-suite --render-script scripts/render-scene-previews.py`。清单格式为 `{"scenes":[{"tag":"example","artifact":"/absolute/path/scene.usdz"}]}`。每个场景结束后更新双语索引和汇总指标，尚未完成的场景明确列出，不算作通过。
