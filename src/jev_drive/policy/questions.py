@@ -1,6 +1,8 @@
 """Versioned prompt definitions; no precomputed maneuver recommendations."""
 
-VERSION = "jev-drive-v1.5"
+from ..control.action_mapping import speed_increments, steering_targets, choice_targets
+
+VERSION = "jev-drive-v1.6"
 COMMON = (
     "Control an ego vehicle in a synchronous driving simulation using the structured state. "
     "Coordinates are ego rig +x forward, +y left. Follow navigation, remain on drivable roads, "
@@ -58,6 +60,9 @@ COMMON = (
     "observation_scope reports cropping and nearest-K omissions; unlisted space is not "
     "verified clear. No future actor trajectory is supplied. "
     "Use current physical speed and commanded steering/target speed. "
+    "vehicle_constraints.control_mapping specifies exact action values, units, update equations "
+    "and reference trajectory equations. Use these to evaluate the motion resulting from each action. "
+    "The numerical action in each criterion is applied subject to those limits. "
     "Choose the control update for this step, considering the other control axis. "
 )
 
@@ -105,15 +110,15 @@ def build(config):
             "speed": {
                 "type": "score",
                 "instructions": speed_instruction,
-                "criteria": SPEED_LEVELS,
+                "criteria": [f"{text} Requested target-speed change: {value:+.6g} m/s for this decision, before rate and speed limits." for text, value in zip(SPEED_LEVELS, speed_increments(config))],
             },
             "steering": {
                 "type": "score",
                 "instructions": steering_instruction,
-                "criteria": STEERING_LEVELS,
+                "criteria": [f"{text} Absolute reference steering target: {value:+.6g} rad, before steering-rate and angle limits." for text, value in zip(STEERING_LEVELS, steering_targets(config))],
             },
         }
-    return {
+    result = {
         "speed": {
             "type": "choice",
             "instructions": speed_instruction,
@@ -133,3 +138,11 @@ def build(config):
             },
         },
     }
+    targets = choice_targets(config)
+    for axis, question in result.items():
+        for label, text in question["criteria"].items():
+            value = targets[axis][label]
+            action = "Requested target-speed change" if axis == "speed" else "Absolute reference steering target"
+            unit = "m/s" if axis == "speed" else "rad"
+            question["criteria"][label] = f"{text} {action}: {value:+.6g} {unit}, before limits."
+    return result

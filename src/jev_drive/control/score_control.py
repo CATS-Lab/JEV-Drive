@@ -1,6 +1,7 @@
 """Validate Score distributions and select explicit semantic control levels."""
 
 import math
+from .action_mapping import speed_increments, steering_targets
 
 
 def number(value, name):
@@ -56,19 +57,11 @@ def selected_level(answer):
     return winners[0]
 
 
-def steering_targets(config):
-    """Fine corrections near zero, with strong turns reaching the configured bound."""
-    magnitudes = [
-        min(config.max_abs_steering_rad, factor * config.steering_score_gain)
-        for factor in (1, 4, 10)
-    ] + [config.max_abs_steering_rad]
-    return [-v for v in reversed(magnitudes)] + [0.0] + magnitudes
-
 
 def commands(answers, config):
     """Return speed increment and ABSOLUTE reference steering target."""
     return (
-        (selected_level(answers["speed"]) - 4) * config.speed_score_gain,
+        speed_increments(config)[selected_level(answers["speed"])],
         steering_targets(config)[selected_level(answers["steering"])],
     )
 
