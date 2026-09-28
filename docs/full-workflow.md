@@ -6,7 +6,7 @@ JEV-Drive connects a structured view of the driving scene to JEV decisions, then
 
 ```mermaid
 flowchart TD
-    A["1. Read the scene<br/>AlpaSim ego, actors, map and route"]
+    A["1. Read the scene<br/>AlpaSim ego, actors, map and destination"]
     B["2. Build structured state<br/>Ego-relative geometry, traffic facts and control context"]
     C["3. Ask JEV<br/>Choose speed and steering changes"]
     D["4. Generate control reference<br/>Apply command limits and build a trajectory"]
@@ -17,8 +17,8 @@ flowchart TD
 
 | Module | What we implement |
 |---|---|
-| Read the scene | [The adapter](../src/jev_drive/integration/alpasim_adapter.py) reads current simulator state, past motion, map geometry and route intent. |
-| Build structured state | Separate [state builders](../src/jev_drive/state/) assemble ego, road, actors, navigation and traffic controls. [The runtime bridge](../src/jev_drive/integration/runtime_bridge.py) passes this state to the driver. |
+| Read the scene | [The adapter](../src/jev_drive/integration/alpasim_adapter.py) reads current simulator state, past motion, map geometry and the destination. |
+| Build structured state | Separate [state builders](../src/jev_drive/state/) assemble ego, road, actors, map-derived road-corridor navigation and traffic controls. [The runtime bridge](../src/jev_drive/integration/runtime_bridge.py) passes this state to the driver. |
 | Ask JEV | [JevModel](../src/jev_drive/policy/jev_model.py) adds command context and questions, then calls the [official JEV client](../src/jev_drive/policy/jev_client.py) for speed/steering decisions. |
 | Generate control reference | [Control modules](../src/jev_drive/control/) convert answers into bounded command increments and a reference trajectory. |
 | Execute and observe again | [The native integration](../src/jev_drive/integration/native_simulation.py) runs AlpaSim's MPC and dynamics. Actual resulting motion becomes the next observation. |

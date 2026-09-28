@@ -4,7 +4,9 @@ English | [简体中文](bev-state-guide.zh-CN.md)
 
 Each figure pairs **actual scene geometry on the left** with **the corresponding structured fields on the right**. Colors and labels identify the same objects in both panels. Click an image to inspect the full-resolution PNG.
 
-All six figures use **one offline snapshot at 0.2 seconds** from scene `clipgt-01330416-9f29-4799-86a6-c4b2f8593375`. It was selected for its 16 nearby actors with available velocity estimates, two stop lines and four signs. Values are rounded to 3 decimals in labels; the saved JSON retains full precision. No JEV API call was needed. The command context in Figure 06 is initialized from this snapshot using the implementation's `ControlState.initialize`; it is not a previous live decision.
+The five retained figures use **one offline snapshot at 0.2 seconds** from scene `clipgt-01330416-9f29-4799-86a6-c4b2f8593375`. It was selected for its 16 nearby actors with available velocity estimates, two stop lines and four signs. Values are rounded to 3 decimals in labels; the saved JSON retains full precision. No JEV API call was needed. The command context in Figure 06 is initialized from this snapshot using the implementation's `ControlState.initialize`; it is not a previous live decision.
+
+These figures preserve a historical snapshot. The old route-polyline panel has been removed; section 04 describes the current navigation input. The rendering script still reproduces all six historical panels, including the obsolete navigation panel.
 
 ## 01. Ego state
 
@@ -30,7 +32,7 @@ A1 points to the orange vehicle and its actual array entry. Other retained actor
 
 The default actor crop is `[-30, 80, -20, 20]`; at most the nearest 16 objects are retained. Relative velocity is actor velocity minus ego velocity, rotated into ego axes; it excludes a rotating-frame position-derivative correction. Missing velocity is `null`; ambiguous or missing lane matches yield `lane_id: null`. Builders: [actors.py](../src/jev_drive/state/actors.py), [lane_matching.py](../src/jev_drive/state/lane_matching.py).
 
-## 04. Navigation route
+## 04. Road-level navigation
 
 Navigation now supplies ordered groups of adjacent same-direction lane IDs, rather than a GT-derived route polyline. JEV chooses lanes and maneuver timing using the map and traffic. Only the trip endpoint is used as the default destination; intermediate GT waypoints are excluded. See [road-level navigation](navigation.md) for the input example, destination configuration and unavailable-map behavior.
 
@@ -62,7 +64,7 @@ Read `outputs/<snapshot>/state.json` to inspect the builder envelope. Read a dec
 
 The small examples contain only structured scene state and basic scene metadata; they contain no credentials, API response, model weights or original USDZ archive.
 
-- [Selected snapshot and initialized command context](examples/driving-state.json): source for all six figures.
+- [Selected snapshot and initialized command context](examples/driving-state.json): source for the archived figures.
 - [Rendering script](../scripts/render-state-guide.py): draws directly from that JSON file using NumPy and Matplotlib. It requires no simulator, network access or JEV provider.
 
 From an environment with the project dependencies installed:

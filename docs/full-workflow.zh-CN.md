@@ -6,7 +6,7 @@ JEV-Drive 将驾驶场景整理成结构化输入，让 JEV 做决策，再由 A
 
 ```mermaid
 flowchart TD
-    A["1. 读取场景<br/>AlpaSim 自车、周边对象、地图和路线"]
+    A["1. 读取场景<br/>AlpaSim 自车、周边对象、地图和目的地"]
     B["2. 构建结构化状态<br/>自车坐标系下的几何、交通事实和控制上下文"]
     C["3. 请求 JEV 决策<br/>选择速度和转向变化"]
     D["4. 生成控制参考<br/>应用指令约束并生成轨迹"]
@@ -17,8 +17,8 @@ flowchart TD
 
 | 模块 | 我们实现的内容 |
 |---|---|
-| 读取场景 | [适配器](../src/jev_drive/integration/alpasim_adapter.py) 读取当前仿真状态、过去运动、地图几何和路线意图。 |
-| 构建结构化状态 | 独立的 [状态构建器](../src/jev_drive/state/) 组装自车、道路、对象、导航和交通控制；[运行时桥接](../src/jev_drive/integration/runtime_bridge.py) 将状态传给驱动。 |
+| 读取场景 | [适配器](../src/jev_drive/integration/alpasim_adapter.py) 读取当前仿真状态、过去运动、地图几何和目的地。 |
+| 构建结构化状态 | 独立的 [状态构建器](../src/jev_drive/state/) 组装自车、道路、对象、基于地图的道路组导航和交通控制；[运行时桥接](../src/jev_drive/integration/runtime_bridge.py) 将状态传给驱动。 |
 | 请求 JEV 决策 | [JevModel](../src/jev_drive/policy/jev_model.py) 添加控制上下文和问题，通过 [官方 JEV 客户端](../src/jev_drive/policy/jev_client.py) 获取速度与转向决策。 |
 | 生成控制参考 | [控制模块](../src/jev_drive/control/) 将回答转换为受约束的指令增量和参考轨迹。 |
 | 执行并再次观测 | [原生集成](../src/jev_drive/integration/native_simulation.py) 运行 AlpaSim 的 MPC 和车辆动力学，实际运动结果成为下一次观测。 |
