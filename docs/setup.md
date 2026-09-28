@@ -97,3 +97,14 @@ Start the driver with `scripts/jev-drive serve --host 127.0.0.1 --port 6789 --ou
 - `JEV_SCENE_MANIFEST=/absolute/path/to/manifest.json`
 
 The manifest is a JSON object mapping **internal scene IDs** to runtime-visible USDZ paths; file UUIDs and internal IDs can differ. The native launcher creates this mapping automatically. Configure the runtime driver endpoint, 200000 µs policy interval, ego noise off, explicit traffic mode, and no driver RPC deadline if indefinite 429 waits are enabled. Container mounts must expose the same configuration and scene paths inside the runtime.
+
+## Labeled rollout previews
+
+Generate a fixed-view panorama and an ego-following lane close-up from an existing run, without API calls:
+
+```bash
+PYTHONPATH=src python scripts/render-scene-previews.py \
+  --run /absolute/path/to/run --artifact "$JEV_ARTIFACT"
+```
+
+The script uses the AlpaSim Python environment and a Noto Sans CJK font at `/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc`. Both English and Chinese GIFs are saved under `previews/labeled-panorama-NNN/` and `previews/labeled-lanes-NNN/`. It matches GT and simulated poses at recorded decision timestamps. Stable colors and IDs connect only one-to-one map segments; new IDs at junction branches do not necessarily mean a lane change. Use `--views panorama` or `--views lanes` to regenerate one view.

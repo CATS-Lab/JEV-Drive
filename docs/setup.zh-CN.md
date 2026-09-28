@@ -97,3 +97,14 @@ tmux -L jev-drive new -s jev-drive
 - `JEV_SCENE_MANIFEST=/absolute/path/to/manifest.json`
 
 manifest 是将**内部场景 ID** 映射到运行时可见 USDZ 路径的 JSON 对象；文件 UUID 可能与内部 ID 不同。原生启动器会自动生成映射。配置驱动服务端点、200000 µs 策略间隔、关闭自车噪声并明确交通模式；如果启用无限期 429 等待，驱动 RPC 不应设置截止时间。容器内需要挂载相应配置与场景路径。
+
+## 带标注的结果预览
+
+从已有运行结果生成固定视角全景和跟随自车的车道近景，不调用 API：
+
+```bash
+PYTHONPATH=src python scripts/render-scene-previews.py \
+  --run /absolute/path/to/run --artifact "$JEV_ARTIFACT"
+```
+
+使用 AlpaSim Python 环境，并安装字体 `/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc`。中英文 GIF 分别保存在 `previews/labeled-panorama-NNN/` 和 `previews/labeled-lanes-NNN/`，GT 与仿真姿态按实际决策时间戳对齐。固定颜色和编号只连接无分支的地图车道段；路口分叉处编号变化不一定代表换道。可用 `--views panorama` 或 `--views lanes` 单独重绘一种视角。
