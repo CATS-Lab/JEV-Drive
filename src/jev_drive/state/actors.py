@@ -1,6 +1,7 @@
 """Current geometric ROI and nearest-K selection; no driving role labels."""
 
 from .snapshot import SceneSnapshot
+from .actor_filter import filter_actors
 from ..config import Config
 
 
@@ -10,8 +11,14 @@ from .lane_matching import lane_id
 
 
 def build(snapshot: SceneSnapshot, config: Config) -> list:
+    result, _ = build_with_audit(snapshot, config)
+    return result
+
+
+def build_with_audit(snapshot: SceneSnapshot, config: Config):
+    filtered, audit = filter_actors(snapshot.actors, config.actor_overlap_filter)
     candidates = []
-    for actor in snapshot.actors:
+    for actor in filtered:
         xyz = points_to_ego([actor["position_world_m"]], snapshot.ego)[0]
         if in_roi(xyz, config.actor_roi):
             candidates.append(
@@ -44,4 +51,5 @@ def build(snapshot: SceneSnapshot, config: Config) -> list:
                 "width_m": float(a["dimensions_m"][1]),
             }
         )
-    return result
+    audit["selected_ids"] = [a["id"] for a in result]
+    return result, audit

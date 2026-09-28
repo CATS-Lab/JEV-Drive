@@ -84,3 +84,5 @@ python scripts/render-state-guide.py --language zh-CN
 ```
 
 Field names and data values stay unchanged between languages.
+
+Overlapping source actor boxes can be filtered before model input; see [actor filtering and offline comparisons](actor-filter.md).

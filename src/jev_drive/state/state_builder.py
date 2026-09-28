@@ -10,6 +10,7 @@ class JevStateBuilder:
         self.config = config
 
     def build(self, snapshot, renderer_payload=None):
+        actor_state, actor_audit = actors.build_with_audit(snapshot, self.config)
         envelope = {
             "kind": "jev.scene_snapshot",
             "schema_version": 1,
@@ -22,11 +23,11 @@ class JevStateBuilder:
             "state": {
                 "ego": ego.build(snapshot),
                 "road": road_graph.build(snapshot, self.config),
-                "actors": actors.build(snapshot, self.config),
+                "actors": actor_state,
                 "navigation": navigation.build(snapshot, self.config),
                 "traffic_controls": traffic_controls.build(snapshot, self.config),
             },
-            "provenance": snapshot.provenance,
+            "provenance": {**snapshot.provenance, "actor_filter": actor_audit},
             "renderer_payload_b64": (
                 base64.b64encode(renderer_payload).decode()
                 if renderer_payload

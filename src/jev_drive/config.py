@@ -22,6 +22,7 @@ class Config:
     road_roi: tuple = (-20.0, 80.0, -15.0, 15.0)
     actor_roi: tuple = (-30.0, 80.0, -20.0, 20.0)
     max_actors: int = 16
+    actor_overlap_filter: bool = True
     centerline_spacing_m: float = 5.0
     min_target_speed_mps: float = 0.0
     max_target_speed_mps: float = 15.0
@@ -97,6 +98,8 @@ class Config:
             raise ValueError("invalid api_min_interval_s")
         if self.min_target_speed_mps != 0 or self.max_target_speed_mps <= 0:
             raise ValueError("v1 requires forward-only bounds")
+        if not isinstance(self.actor_overlap_filter, bool):
+            raise ValueError("actor_overlap_filter must be boolean")
         if self.max_actors < 1:
             raise ValueError("max_actors must be positive")
         for roi in (self.road_roi, self.actor_roi):
