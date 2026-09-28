@@ -176,6 +176,10 @@ class AlpasimAdapter:
         self.config = config
         self.artifact = Artifact(str(artifact_path), _smooth_trajectories=False)
         self.lanes, self.controls = map_records(self.artifact.map)
+        self.road_edges = [
+            {"id": str(edge.id), "points_world": edge.polyline.xyz.tolist()}
+            for edge in self.artifact.map.road_edges
+        ]
         signals, available = artifact_signals(artifact_path)
         self.controls["signals"] = signals
         self.controls["availability"]["signal_geometry"] = available
@@ -271,6 +275,7 @@ class AlpasimAdapter:
             self.controls,
             {
                 "map": "available",
+                "road_edges": "source_map_road_edges",
                 "actors": "simulation_ground_truth",
                 "ego": dynamics_source,
                 "route": "map_topology",
@@ -279,6 +284,7 @@ class AlpasimAdapter:
                 "source_artifact": str(self.artifact.source),
             },
             navigation_goal_world_m=list(goal),
+            road_edges=self.road_edges,
         )
 
     def from_runtime(self, state, event):

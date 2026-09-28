@@ -1,6 +1,7 @@
 """Crop lane geometry, preserve disconnected pieces, and report topology facts."""
 
 from .snapshot import SceneSnapshot
+from . import road_boundaries
 from ..config import Config
 
 
@@ -75,6 +76,7 @@ def build(snapshot: SceneSnapshot, config: Config) -> dict:
         lane["unresolved_references"] = sorted(refs - all_ids)
     return {
         "lanes": sorted(lanes, key=lambda lane: lane["id"]),
+        "road_boundaries": road_boundaries.build(snapshot, config),
         "roi_m": list(config.road_roi),
         "availability": snapshot.provenance.get("map", "available"),
     }

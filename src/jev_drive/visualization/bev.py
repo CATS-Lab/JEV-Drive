@@ -56,6 +56,9 @@ def render(event, path):
                     linewidth=0.5,
                     linestyle="--" if lane[side]["type"] == "dashed" else "-",
                 )
+    for edge in state["road"].get("road_boundaries", {}).get("edges", []):
+        for segment in edge["segments"]:
+            line(segment, color="#b91c1c", linewidth=1.8)
     for segment in state["navigation"].get("route_segments", []):
         line(segment, color="#3286ce", linewidth=1.5, alpha=0.7)
     for item in state["traffic_controls"]["stop_lines"]:

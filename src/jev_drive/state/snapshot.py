@@ -1,6 +1,6 @@
 """Serializable snapshot. Native simulator objects never escape the adapter."""
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 
 
 @dataclass(frozen=True)
@@ -17,6 +17,7 @@ class SceneSnapshot:
     traffic_controls: dict
     provenance: dict
     navigation_goal_world_m: list | None = None
+    road_edges: list = field(default_factory=list)
 
     def as_dict(self):
         return asdict(self)

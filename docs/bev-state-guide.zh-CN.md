@@ -24,6 +24,8 @@
 
 `roi_m` 按 `[x_min, x_max, y_min, y_max]` 排列，单位米；道路默认裁剪范围为 `[-20, 80, -15, 15]`。中心线默认每 5 米采样并保留端点。不连续 `segments` 不能跨空隙连线。邻道和后继 ID 保留源拓扑；`references_outside_roi` 与 `unresolved_references` 含义不同。构建器：[road_graph.py](../src/jev_drive/state/road_graph.py)。
 
+当前输入另外提供 `road.road_boundaries.edges`：源地图的独立道路边界折线，与车道分界线不同。旧适配器曾遗漏这一层，历史图示不包含它。独立模块为 [road_boundaries.py](../src/jev_drive/state/road_boundaries.py)。当前 BEV 以红线绘制道路边界；裁剪端点不会生成新的道路边界。
+
 ## 03. 周边对象
 
 A1 指向橙色车辆及其真实数组项；其他对象标有源 ID。速度箭头将选中对象的相对速度乘以一秒以便展示，它是向量示意，不是预测轨迹。标签引线只用于标识包围盒。

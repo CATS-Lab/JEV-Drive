@@ -24,6 +24,8 @@ Blue highlights one retained lane; purple/orange highlight its left/right bounda
 
 `roi_m` is `[x_min, x_max, y_min, y_max]` in meters; the default road crop is `[-20, 80, -15, 15]`. Centerlines are sampled at 5 m spacing with endpoints retained. Disconnected `segments` must not be joined across gaps. Neighbor/successor IDs preserve source topology; `references_outside_roi` differs from `unresolved_references`. Builder: [road_graph.py](../src/jev_drive/state/road_graph.py).
 
+Current inputs additionally include `road.road_boundaries.edges`, original map road-edge polylines distinct from lane dividers. These were omitted by the earlier adapter and are absent from the archived figures. The independent builder is [road_boundaries.py](../src/jev_drive/state/road_boundaries.py). Live BEV renders them in red; clipped endpoints do not create road edges.
+
 ## 03. Nearby actors
 
 A1 points to the orange vehicle and its actual array entry. Other retained actors are shown with their source IDs. The velocity arrow shows the selected actor's relative velocity multiplied by one second for display. It is a vector illustration, not a predicted trajectory; the label leader only identifies the box.

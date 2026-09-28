@@ -1,6 +1,6 @@
 """Versioned prompt definitions; no precomputed maneuver recommendations."""
 
-VERSION = "jev-drive-v1.2"
+VERSION = "jev-drive-v1.3"
 COMMON = (
     "Control an ego vehicle in a synchronous driving simulation using the structured state. "
     "Coordinates are ego rig +x forward, +y left. Follow navigation, remain on drivable roads, "
@@ -17,7 +17,11 @@ COMMON = (
     "respecting any supplied marking restrictions. An unknown boundary type is not permission "
     "to cross. Keep the entire vehicle footprint within the drivable roadway, not just its center; "
     "do not leave the road or use sidewalks, shoulders, or medians as travel lanes. "
-    "The state supplies lane edges, not a separate physical road-edge map. Missing neighbors, "
+    "road.road_boundaries.edges contains source-map road edges, distinct from lane dividers. "
+    "Do not cross or overlap these road edges with any part of the vehicle. Use lane geometry "
+    "to identify the roadway side; road edges are open polylines, not closed area polygons. "
+    "An empty edge list only means no edge is represented in the local input, not that all "
+    "surrounding space is drivable. Missing neighbors, "
     "missing geometry, and ROI clipping endpoints do not establish a physical road boundary "
     "or extra drivable space. If a safe continuation is uncertain, slow down or stop. "
     "Navigation contains an ordered sequence of map-derived road corridors, each listing "
@@ -27,6 +31,12 @@ COMMON = (
     "refer to map sections ahead, not missing obstacles. If navigation is unavailable, do not "
     "invent a route; slow down or stop safely. "
     "Navigation does not override road boundaries, traffic direction, or collision avoidance. "
+    "Do not collide with or overlap any actor's footprint. Consider the ego vehicle's full "
+    "dimensions, actor dimensions, positions and velocities; anticipate closing gaps over "
+    "the upcoming motion rather than checking only current separation. Maintain clearance "
+    "and enough following distance to brake. If the intended motion would intersect an actor, "
+    "reduce speed or stop before contact; do not assume other actors will yield or move aside. "
+    "Collision avoidance and staying within road boundaries take priority over route progress. "
     "Use current physical speed and commanded steering/target speed. "
     "Choose the control update for this step, considering the other control axis. "
 )
