@@ -34,6 +34,8 @@ Lane colors and IDs stay consistent across both views. Green is the ego vehicle;
 - [Five-module workflow](docs/full-workflow.md) — how the implementation fits together.
 - [BEV state guide](docs/bev-state-guide.md) — annotated scene elements beside their actual input fields.
 
+- [Recovery and coverage](docs/recovery.md)
+
 ## Quick start
 
 Requirements: **Linux, Python 3.12, a configured AlpaSim environment, a compatible USDZ scene and a TypeSafe API key**. Complete the [setup instructions](docs/setup.md), including the AlpaSim runtime patch, then run from the repository root:

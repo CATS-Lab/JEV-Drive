@@ -9,6 +9,20 @@ from .config import Config
 
 async def execute(args):
     config = Config.load(args.config)
+    if args.command == "retry-scene":
+        from .evaluation.retries import run_scene
+
+        report = await run_scene(
+            args.artifact,
+            config,
+            args.output,
+            args.steps,
+            rewind_steps=args.rewind_steps,
+            max_retries=args.max_retries,
+            seed_log=args.seed_log,
+        )
+        print(json.dumps(report, indent=2))
+        return
     if args.command == "snapshot":
         from .integration.alpasim_adapter import AlpasimAdapter
         from .state.state_builder import JevStateBuilder
@@ -104,6 +118,13 @@ def main():
         p.add_argument("--signal-annotations")
         if command in {"simulate", "native-simulate"}:
             p.add_argument("--steps", type=int, default=10)
+    p = sub.add_parser("retry-scene")
+    p.add_argument("--artifact", required=True)
+    p.add_argument("--output", required=True)
+    p.add_argument("--steps", type=int, required=True)
+    p.add_argument("--rewind-steps", type=int, default=5)
+    p.add_argument("--max-retries", type=int, default=3)
+    p.add_argument("--seed-log")
     p = sub.add_parser("serve")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=6789)

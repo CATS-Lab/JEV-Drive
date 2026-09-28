@@ -19,6 +19,7 @@ from alpasim_grpc.v0.logging_pb2 import LogEntry
 from alpasim_utils.geometry import pose_from_grpc
 from matplotlib.font_manager import FontProperties
 from jev_drive.config import Config
+from jev_drive.state.actor_filter import filter_actors
 from jev_drive.integration.alpasim_adapter import AlpasimAdapter, actor_records
 
 import colorsys
@@ -31,11 +32,14 @@ parser.add_argument("--artifact", type=Path, required=True)
 parser.add_argument("--views", choices=["both", "panorama", "lanes"], default="both")
 args = parser.parse_args()
 rows = []
+safety_failure = None
 for line in (args.run / "decisions.jsonl").read_text().splitlines():
     try:
         row = json.loads(line)
     except ValueError:
         continue
+    if row.get("event") == "safety_failure":
+        safety_failure = row
     if row.get("event") == "decision":
         rows.append(row)
 if args.steps < 1:
@@ -76,12 +80,31 @@ for log in (args.run / "rollouts").glob("*/*/rollout.asl"):
                         poses[t][0], pos, atol=1e-4
                     ), "Pose sources disagree"
                 poses[t] = (pos, rot)
+# Include the actual detected failure pose, not just the preceding policy pose.
+# It is a visualization sample, not another JEV decision.
+terminal_sample = False
+if (
+    safety_failure
+    and len(rows) < args.steps
+    and safety_failure["timestamp_us"] in poses
+    and safety_failure["timestamp_us"] > rows[-1]["timestamp_us"]
+):
+    terminal = dict(rows[-1])
+    terminal["timestamp_us"] = safety_failure["timestamp_us"]
+    terminal["step_index"] = rows[-1]["step_index"] + 1
+    rows.append(terminal)
+    terminal_sample = True
 missing = [r["timestamp_us"] for r in rows if r["timestamp_us"] not in poses]
 if missing:
     raise SystemExit(f"Missing controller pose for {len(missing)} decision timestamps")
 
 
-adapter = AlpasimAdapter(args.artifact, Config())
+run_config = (
+    Config.load(args.run / "jev-config.json")
+    if (args.run / "jev-config.json").exists()
+    else Config()
+)
+adapter = AlpasimAdapter(args.artifact, run_config)
 assert adapter.artifact.scene_id == rows[0]["scene_id"]
 times = [r["timestamp_us"] for r in rows]
 gt_poses = [adapter.artifact.rig.trajectory.interpolate_pose(t) for t in times]
@@ -160,7 +183,13 @@ if xmax - xmin < height * 1.8:
     mid = (xmin + xmax) / 2
     xmin = mid - height * 0.9
     xmax = mid + height * 0.9
-traffic = [actor_records(adapter.artifact.traffic_objects, t) for t in times]
+traffic = [
+    filter_actors(
+        actor_records(adapter.artifact.traffic_objects, t),
+        enabled=run_config.actor_overlap_filter,
+    )[0]
+    for t in times
+]
 metrics = []
 
 
@@ -407,7 +436,10 @@ for mode, folder in [("panorama", pan_dir), ("lanes", close_dir)]:
         print(mode, lang, "done", flush=True)
 metadata = {
     "scene_id": rows[0]["scene_id"],
+    "actor_overlap_filter": run_config.actor_overlap_filter,
     "frames": len(rows),
+    "terminal_failure_pose_included": terminal_sample,
+    "safety_failure": safety_failure,
     "span_s": (times[-1] - times[0]) / 1e6,
     "frame_duration_ms": 200,
     "labels": "One-to-one map-lane chains; new IDs at branches, not necessarily lane changes",

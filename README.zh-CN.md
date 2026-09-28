@@ -34,6 +34,8 @@ JEV-Drive 使用 TypeSafe 的 [JEV](https://docs.typesafe.ai/introduction)，在
 - [五模块流程图](docs/full-workflow.zh-CN.md)：各部分如何衔接。
 - [BEV 状态图解](docs/bev-state-guide.zh-CN.md)：场景对象与实际输入字段对照。
 
+- [回退重试与覆盖率](docs/recovery.zh-CN.md)
+
 ## 快速开始
 
 需要 **Linux、Python 3.12、已配置好的 AlpaSim 环境、兼容的 USDZ 场景和 TypeSafe API 密钥**。先完成 [安装说明](docs/setup.zh-CN.md)，包括 AlpaSim 运行时补丁，再在仓库根目录运行：

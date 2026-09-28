@@ -54,7 +54,9 @@ class OutcomeLogger:
                 )
 
 
-async def run(artifact, config, client, output, steps=5, annotations=None):
+async def run(
+    artifact, config, client, output, steps=5, annotations=None, *, safety_monitor=None
+):
     # The explicit hook is required; fail before making decisions if the wrong
     # checkout is imported. This launcher never patches installed modules.
     from alpasim_runtime.events import policy
@@ -119,6 +121,9 @@ async def run(artifact, config, client, output, steps=5, annotations=None):
         renderer = SensorsimService("", True, catalog)
         sim_config = SimulationConfig(
             n_sim_steps=steps + 1,
+            pose_reporting_interval_us=(
+                safety_monitor.sample_interval_us if safety_monitor else 0
+            ),
             n_rollouts=1,
             min_traffic_duration_us=0,
             cameras=[],
@@ -149,6 +154,9 @@ async def run(artifact, config, client, output, steps=5, annotations=None):
             None,
         )
         rollout.broadcaster.handlers.append(OutcomeLogger(logger, sid))
+        if safety_monitor is not None:
+            safety_monitor.logger = logger
+            rollout.broadcaster.handlers.append(safety_monitor)
         print(
             f"Running {steps} JEV decisions ({steps * config.decision_dt_s:.1f}s closed loop).",
             flush=True,
@@ -171,6 +179,8 @@ async def run(artifact, config, client, output, steps=5, annotations=None):
         summary["completed_decisions"] = sum(
             json.loads(line).get("event") == "decision" for line in records
         )
+        if safety_monitor is not None:
+            summary["safety"] = safety_monitor.report()
         (output / "summary.json").write_text(json.dumps(summary, indent=2))
         await driver_server.stop(0)
         controller_server.stop(0).wait()
