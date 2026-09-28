@@ -12,11 +12,12 @@ def choice_targets(config):
     }
 
 
-def steering_targets(config):
-    """Fine corrections near zero, with strong turns reaching the configured bound."""
-    magnitudes = [
-        min(config.max_abs_steering_rad, factor * config.steering_score_gain)
-        for factor in (1, 4, 10)
-    ] + [config.max_abs_steering_rad]
-    return [-v for v in reversed(magnitudes)] + [0.0] + magnitudes
+def continuous_commands(speed_score, steering_score, config):
+    """Map the reported continuous scores to pre-limit commands."""
+    return ((speed_score - 4) * config.speed_score_gain,
+            (steering_score - 4) * config.steering_score_gain)
 
+
+def steering_targets(config):
+    """Integer anchors of the continuous steering mapping, before limits."""
+    return [continuous_commands(4, level, config)[1] for level in range(9)]

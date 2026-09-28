@@ -6,7 +6,7 @@ from jev_drive.config import Config
 from jev_drive.control.control_state import ControlState
 from jev_drive.control.limits import apply
 from jev_drive.control.trajectory import generate
-from jev_drive.control.score_control import commands, selected_level
+from jev_drive.control.score_control import commands
 from jev_drive.policy.jev_model import JevModel
 from jev_drive.logging.decision_log import DecisionLog
 from jev_drive.state.state_builder import JevStateBuilder
@@ -61,10 +61,10 @@ async def test_near_neutral_score_unwinds_and_does_not_integrate_bias(tmp_path):
     for i in range(30):
         snap = replace(snapshot(), timestamp_us=1000000 + i * 200000, step_index=i)
         result = await model.predict(JevStateBuilder(Config()).build(snap))
-        assert result["score_diagnostics"]["steering"]["selected_level"] == 4
-        assert result["increments"]["requested_steering_target_rad"] == 0
+        assert result["score_diagnostics"]["steering"]["control_score"] == 3.99
+        assert result["increments"]["requested_steering_target_rad"] == pytest.approx(-0.00015)
         assert result["control"]["steering_angle"] == pytest.approx(
-            -0.04 if i == 0 else 0
+            -0.04 if i == 0 else -0.00015
         )
 
 
@@ -81,11 +81,10 @@ async def test_repeated_direction_targets_do_not_accumulate(tmp_path):
         assert result["control"]["steering_angle"] == pytest.approx(0.015)
 
 
-def test_ambiguous_score_is_not_averaged_into_fake_straight():
-    answer = score_response()["answers"]["steering"]
-    answer["probabilities"] = {str(i): (0.5 if i in [0, 8] else 0) for i in range(9)}
-    with pytest.raises(ValueError, match="ambiguous"):
-        selected_level(answer)
+def test_tied_probabilities_use_continuous_score():
+    answers = score_response()["answers"]
+    answers["steering"]["probabilities"] = {str(i): (0.5 if i in [0, 8] else 0) for i in range(9)}
+    assert commands(answers, Config()) == (0, 0)
 
 
 @pytest.mark.asyncio
@@ -122,15 +121,15 @@ async def test_native_high_speed_start_has_no_speed_jump(tmp_path):
     assert outcomes[-1]["speed_mps"] > 24
 
 
-def test_absolute_steering_levels_keep_fine_resolution_and_full_range():
+def test_absolute_steering_anchors_match_linear_score_mapping():
     from jev_drive.control.score_control import steering_targets
 
     targets = steering_targets(Config())
     assert targets == pytest.approx(
-        [-0.4, -0.15, -0.06, -0.015, 0, 0.015, 0.06, 0.15, 0.4]
+        [-0.06, -0.045, -0.03, -0.015, 0, 0.015, 0.03, 0.045, 0.06]
     )
     state = ControlState(5, 0)
-    for expected in [0.16, 0.32, 0.4, 0.4]:
+    for expected in [0.06, 0.06, 0.06, 0.06]:
         dv, target = commands(score_response(4, 8)["answers"], Config())
         state, _ = apply(state, dv, target - state.steering_angle, 0.2, Config())
         assert state.steering_angle == pytest.approx(expected)

@@ -2,7 +2,7 @@
 
 from ..control.action_mapping import speed_increments, steering_targets, choice_targets
 
-VERSION = "jev-drive-v1.6"
+VERSION = "jev-drive-v1.7"
 COMMON = (
     "Control an ego vehicle in a synchronous driving simulation using the structured state. "
     "Coordinates are ego rig +x forward, +y left. Follow navigation, remain on drivable roads, "
@@ -92,17 +92,21 @@ STEERING_LEVELS = [
 
 
 def build(config):
-    speed_instruction = COMMON + (
-        "Select the speed action appropriate to the current scene. The highest-probability "
-        "description is executed, not the probability-weighted average. Deceleration must "
+    selection = (
+        "The returned continuous score is mapped linearly to control using vehicle_constraints.control_mapping; "
+        "integer criteria are anchors and fractional scores produce intermediate commands. "
+        if config.mode == "score" else "The returned validated choice label is executed. "
+    )
+    speed_instruction = COMMON + selection + (
+        "Select the speed action appropriate to the current scene. Deceleration must "
         "be sufficient for visible hazards; acceleration requires a clear safe continuation."
     )
-    steering_instruction = COMMON + (
+    steering_instruction = COMMON + selection + (
         "Select the absolute reference steering appropriate to the upcoming motion. "
         "Positive steering turns left; negative turns right. This is a new steering target, "
         "not an increment. Straight means return the reference steering to zero under rate "
         "limits; it does not mean hold an existing turn. Consider heading and position "
-        "relative to lane geometry. The highest-probability description is executed. "
+        "relative to lane geometry. "
         "If turning cannot avoid a hazard safely, also choose adequate braking."
     )
     if config.mode == "score":

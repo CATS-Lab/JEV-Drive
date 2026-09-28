@@ -22,7 +22,7 @@ def test_published_score_actions_equal_executed_actions(custom):
         assert steering == actions['absolute_steering_rad_by_level'][level]
         assert f'{speed:+.6g} m/s' in questions['speed']['criteria'][level]
         assert f'{steering:+.6g} rad' in questions['steering']['criteria'][level]
-    assert VERSION == 'jev-drive-v1.6'
+    assert VERSION == 'jev-drive-v1.7'
 
 
 def test_choice_exposes_numeric_actions_and_controller_rules():
@@ -39,3 +39,14 @@ def test_choice_exposes_numeric_actions_and_controller_rules():
             assert f'{angle:+.6g} rad' in questions['steering']['criteria'][steer]
     assert 'v_old>v_max' in contract['speed_update'][-1]
     assert 'delta_req-delta_old' in contract['steering_update'][0]
+
+
+@pytest.mark.parametrize('value', [0, 2.25, 3.99, 4, 4.16, 7.75, 8])
+def test_fractional_score_matches_published_formula_even_when_mode_differs(value):
+    config = Config()
+    answers = {'speed': answer(4), 'steering': answer(4)}
+    for axis in answers: answers[axis]['score'] = value
+    dv, steering = score_control.commands(answers, config)
+    mapping = constraints(config)['control_mapping']['score_mapping']
+    assert dv == pytest.approx((value - 4) * mapping['speed_score_gain_mps'])
+    assert steering == pytest.approx((value - 4) * mapping['steering_score_gain_rad'])

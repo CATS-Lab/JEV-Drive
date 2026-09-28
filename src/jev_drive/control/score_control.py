@@ -1,7 +1,7 @@
-"""Validate Score distributions and select explicit semantic control levels."""
+"""Validate distributions and map the returned continuous scores to commands."""
 
 import math
-from .action_mapping import speed_increments, steering_targets
+from .action_mapping import continuous_commands, steering_targets
 
 
 def number(value, name):
@@ -48,22 +48,9 @@ def score(answer):
     return value
 
 
-def selected_level(answer):
-    score(answer)  # Validate and retain the reported mean for diagnostics only.
-    p = answer["probabilities"]
-    winners = [int(k) for k, value in p.items() if abs(value - max(p.values())) < 1e-9]
-    if len(winners) != 1:
-        raise ValueError("ambiguous Score action: tied maximum probabilities")
-    return winners[0]
-
-
-
 def commands(answers, config):
-    """Return speed increment and ABSOLUTE reference steering target."""
-    return (
-        speed_increments(config)[selected_level(answers["speed"])],
-        steering_targets(config)[selected_level(answers["steering"])],
-    )
+    """Return continuous speed increment and absolute steering target."""
+    return continuous_commands(score(answers["speed"]), score(answers["steering"]), config)
 
 
 def diagnostics(answers):
@@ -75,7 +62,7 @@ def diagnostics(answers):
         mean = math.fsum(int(k) * v for k, v in answer["probabilities"].items()) / total
         result[axis] = {
             "reported_score": answer["score"],
-            "selected_level": selected_level(answer),
+            "control_score": score(answer),
             "raw_probability_sum": total,
             "probability_weighted_mean": mean,
             "reported_minus_mean": answer["score"] - mean,
