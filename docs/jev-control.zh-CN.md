@@ -83,7 +83,7 @@ raw_delta_steering = (steering.score - 4) × steering_score_gain
 
 更新以**上一次目标速度**为基准，不是将增量加到实际测得的速度上。转向增量同样加到之前的参考转向指令上；零增量保持已有指令。
 
-[score_control.py](../src/jev_drive/control/score_control.py) 校验后直接使用返回的 `score`。概率加权均值只用于记录诊断，不替代该分数。可选的 `confidence` 会被校验，但不参与控制缩放或决定是否执行。
+[score_control.py](../src/jev_drive/control/score_control.py) 校验后直接使用返回的 `score`。概率加权均值只用于记录诊断，不替代该分数。Score 概率总和与 1 的差最多允许 0.01，以兼容回答中的小幅舍入误差；仅诊断均值做归一化，原始概率总和及完整回答都会保留。Choice 仍使用更严格的 0.0001 总和容差。可选的 `confidence` 会被校验，但不参与控制缩放或决定是否执行。
 
 ## 3. 先限制变化率，再限制绝对值
 
@@ -145,3 +145,5 @@ y(t) = R × (1 - cos(heading(t)))
 在 `decisions.jsonl` 的决策事件中查看 `raw_response`、`control_before`、`increments`、`control` 和 `trajectory`，即可分别看到模型回答、转换前状态、原始/限速率后/实际应用的增量、最终指令及参考轨迹。`outcome` 事件记录实际仿真运动。
 
 返回 [五模块流程图](full-workflow.zh-CN.md)，或查看 [BEV 输入图解](bev-state-guide.zh-CN.md)。
+
+可选配置 `api_503_retries`（默认 `0`，最大 `10`）允许对临时 HTTP 503 使用相同输入重试，期间仿真暂停。等待时间优先使用 `Retry-After`，否则使用配置的退避间隔。次数上限按每个决策计算，503 之间出现 429 也不会重置计数；超过上限后本次仿真失败。

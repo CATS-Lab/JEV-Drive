@@ -83,7 +83,7 @@ Start with target speed **10.0 m/s**, steering command **0.020 rad**, and a **0.
 
 The updated target is based on the **previous target**, not added to measured speed. Likewise, the steering increment is added to the previous reference command. A zero increment preserves that command.
 
-[score_control.py](../src/jev_drive/control/score_control.py) uses the returned `score` directly after validation. The probability-weighted mean is logged as a diagnostic, not substituted for the score. `confidence`, when present, is validated but does not scale or gate the control update.
+[score_control.py](../src/jev_drive/control/score_control.py) uses the returned `score` directly after validation. The probability-weighted mean is logged as a diagnostic, not substituted for the score. Score probability sums may differ from 1 by at most 0.01 to accommodate rounded responses; only the diagnostic mean is normalized, and the original sum and raw response are logged. Choice retains the stricter 0.0001 sum tolerance. `confidence`, when present, is validated but does not scale or gate the control update.
 
 ## 3. Apply rate limits, then absolute limits
 
@@ -145,3 +145,5 @@ Answer types, probability keys, finite numbers, probability bounds/sums and scor
 To inspect the conversion, read `raw_response`, `control_before`, `increments`, `control` and `trajectory` in a decision event in `decisions.jsonl`. These record the model answer, raw/rate-limited/applied changes, final command and reference. `outcome` events record the actual simulated motion.
 
 Return to the [five-module workflow](full-workflow.md) or inspect the [BEV input guide](bev-state-guide.md).
+
+The optional `api_503_retries` setting (default `0`, maximum `10`) retries a temporary HTTP 503 with the identical request while simulation time is paused. It honors `Retry-After` or uses the configured backoff. The limit applies per decision, including when 429 responses occur between 503 responses; exhausting it fails the rollout.

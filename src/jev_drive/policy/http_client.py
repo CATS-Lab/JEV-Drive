@@ -41,6 +41,7 @@ class HttpJevClient:
     async def decide(self, state, questions):
         payload = {"model": self.config.model, "state": state, "questions": questions}
         attempt = 0
+        service_retries = 0
         backoff = self.config.retry_initial_s
         while True:
             attempt += 1
@@ -60,10 +61,17 @@ class HttpJevClient:
             if response.status_code == 200:
                 break
             details = self._http_error_details(response)
-            if response.status_code != 429 or not self.config.retry_429:
+            retry_rate_limit = response.status_code == 429 and self.config.retry_429
+            retry_service = (
+                response.status_code == 503
+                and service_retries < self.config.api_503_retries
+            )
+            if not (retry_rate_limit or retry_service):
                 raise JevAPIError(
                     f"JEV HTTP {response.status_code}", diagnostics=details
                 )
+            if retry_service:
+                service_retries += 1
             wait_s = retry_delay(response.headers.get("retry-after"), backoff)
             event = {
                 "event": "api_retry",
@@ -75,8 +83,9 @@ class HttpJevClient:
             if self.on_event is not None:
                 self.on_event(event)
             logger.warning(
-                "JEV HTTP 429 at simulation timestamp %s; attempt %d, waiting %.1fs. "
+                "JEV HTTP %d at simulation timestamp %s; attempt %d, waiting %.1fs. "
                 "The same decision will be retried; simulation is paused.",
+                response.status_code,
                 state.get("timestamp_us"),
                 attempt,
                 wait_s,

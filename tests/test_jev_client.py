@@ -233,6 +233,7 @@ async def test_reported_score_drives_control_and_difference_is_logged(
         assert result["score_diagnostics"]["speed"] == pytest.approx(
             {
                 "reported_score": 4.4,
+                "raw_probability_sum": 1.0,
                 "probability_weighted_mean": 8.0,
                 "reported_minus_mean": -3.6,
             }
@@ -424,3 +425,61 @@ async def test_retry_backoff_is_capped(make_client, monkeypatch):
         assert waits == [5, 10, 12, 12, 12]
     finally:
         await client.close()
+
+
+@pytest.mark.asyncio
+async def test_optional_503_retry_preserves_request_and_retry_after(
+    make_client, monkeypatch
+):
+    import asyncio
+
+    calls, waits, events = [], [], []
+
+    def handle(request):
+        calls.append(json.loads(request.content))
+        if len(calls) == 1:
+            return httpx.Response(503, headers={"Retry-After": "7"}, json={})
+        return httpx.Response(200, json=gateway_response("score"))
+
+    async def sleep(delay):
+        waits.append(delay)
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    client = make_client(handle, Config(api_503_retries=3))
+    client.on_event = events.append
+    try:
+        await client.decide({"timestamp_us": 123}, build(Config()))
+        assert len(calls) == 2 and calls[0] == calls[1]
+        assert waits == [7]
+        assert events[0]["error_details"]["status_code"] == 503
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_503_retry_limit_survives_interleaved_429(make_client, monkeypatch):
+    import asyncio
+
+    calls = []
+
+    def handle(request):
+        calls.append(1)
+        return httpx.Response(429 if len(calls) % 2 == 0 else 503, json={})
+
+    async def sleep(delay):
+        pass
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    client = make_client(handle, Config(api_503_retries=2, retry_429=True))
+    try:
+        with pytest.raises(JevAPIError, match="503"):
+            await client.decide({}, build(Config()))
+        assert len(calls) == 5
+    finally:
+        await client.close()
+
+
+@pytest.mark.parametrize("value", [-1, 11, True, 1.5])
+def test_invalid_503_retry_limit(value):
+    with pytest.raises(ValueError):
+        Config(api_503_retries=value)

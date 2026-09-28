@@ -14,6 +14,7 @@ class Config:
     endpoint: str | None = None
     api_timeout_s: float = 120.0
     retry_429: bool = False
+    api_503_retries: int = 0
     retry_initial_s: float = 5.0
     retry_max_s: float = 60.0
     api_min_interval_s: float = 0.0
@@ -86,6 +87,8 @@ class Config:
             v = getattr(self, name)
             if not math.isfinite(v) or v <= 0:
                 raise ValueError(f"invalid {name}")
+        if type(self.api_503_retries) is not int or not 0 <= self.api_503_retries <= 10:
+            raise ValueError("api_503_retries must be an integer in [0,10]")
         if not isinstance(self.retry_429, bool):
             raise ValueError("retry_429 must be boolean")
         if self.retry_initial_s > self.retry_max_s:

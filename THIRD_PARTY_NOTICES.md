@@ -33,7 +33,7 @@ The homepage panorama and lane close-up (`docs/images/lane-panorama.gif`,
 `docs/images/lane-closeup.gif`, and their `zh-CN/` versions) compare a partial live
 JEV Score rollout with the original recorded GT trajectory from scene
 `clipgt-07054c19-f27f-42cc-8413-35e05c924d06`. JEV used the local development
-client. Each animation contains 65 synchronized frames spanning 12.8 seconds;
+client. Each animation contains 93 synchronized frames spanning 18.4 seconds;
 metadata is in `docs/images/lane-examples.json`. These scene-derived
 visualizations remain subject to the source-data scope below.
 

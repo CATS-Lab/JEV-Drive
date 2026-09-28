@@ -13,13 +13,17 @@ def number(value, name):
     return float(value)
 
 
-def probabilities(answer, keys):
+def probabilities(answer, keys, *, sum_tolerance=1e-4):
     probs = answer["probabilities"]
     if set(probs) != set(keys):
         raise ValueError("probability keys mismatch")
     p = {k: number(probs[k], k) for k in keys}
-    if any(v < 0 or v > 1 for v in p.values()) or abs(sum(p.values()) - 1) > 1e-4:
-        raise ValueError("invalid probability distribution")
+    total = math.fsum(p.values())
+    if (
+        any(v < 0 or v > 1 for v in p.values())
+        or abs(total - 1) > sum_tolerance + 1e-12
+    ):
+        raise ValueError(f"invalid probability distribution (sum={total:.8g})")
     # Confidence is optional metadata and is not a control input.
     if (
         "confidence" in answer
@@ -32,7 +36,9 @@ def probabilities(answer, keys):
 def score(answer):
     if answer["type"] != "score":
         raise ValueError("expected score answer")
-    probabilities(answer, [str(i) for i in range(9)])
+    # Some Score responses round probabilities to two decimal places.
+    # Accept at most one percentage point of sum error; control still uses score.
+    probabilities(answer, [str(i) for i in range(9)], sum_tolerance=0.01)
     value = number(answer["score"], "score")
     if not 0 <= value <= 8:
         raise ValueError("score outside [0,8]")
@@ -53,9 +59,11 @@ def diagnostics(answers):
     result = {}
     for axis in ("speed", "steering"):
         answer = answers[axis]
-        mean = math.fsum(int(k) * v for k, v in answer["probabilities"].items())
+        total = math.fsum(answer["probabilities"].values())
+        mean = math.fsum(int(k) * v for k, v in answer["probabilities"].items()) / total
         result[axis] = {
             "reported_score": answer["score"],
+            "raw_probability_sum": total,
             "probability_weighted_mean": mean,
             "reported_minus_mean": answer["score"] - mean,
         }

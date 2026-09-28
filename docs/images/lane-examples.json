@@ -1,7 +1,7 @@
 {
   "scene_id": "clipgt-07054c19-f27f-42cc-8413-35e05c924d06",
-  "frames": 65,
-  "time_span_s": 12.8,
+  "frames": 93,
+  "time_span_s": 18.4,
   "frame_duration_ms": 200,
   "frame": "Fixed initial ego pose; forward is right",
   "gt_source": "Original recorded rig trajectory, interpolated at JEV decision timestamps",
@@ -117,7 +117,12 @@
     "L3"
   ],
   "jev_body_center_lanes": [
-    "L3"
+    "L3",
+    "L4"
   ],
-  "marking_type": "unknown; mapped neighboring lane edges can differ"
+  "marking_type": "unknown; mapped neighboring lane edges can differ",
+  "jev_end_state": "Outside mapped lane polygons",
+  "run_success": false,
+  "run_failure_step": 94,
+  "run_failure_reason": "Score probability sum 0.99 rejected before rounding-tolerance fix"
 }
