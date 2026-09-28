@@ -29,8 +29,13 @@ def clip_resample(points_world, ego, roi, spacing):
         if line.project(Point(coords[0])) > line.project(Point(coords[-1])):
             segment = LineString(coords[::-1])
         ds = list(np.arange(0, segment.length, spacing)) + [segment.length]
+        # Millimetre precision avoids spending model context on float noise.
+        # The source snapshot retains full precision.
         result.append(
-            [[float(p.x), float(p.y)] for p in (segment.interpolate(d) for d in ds)]
+            [
+                [round(float(p.x), 3), round(float(p.y), 3)]
+                for p in (segment.interpolate(d) for d in ds)
+            ]
         )
     return result
 

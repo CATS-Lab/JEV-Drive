@@ -147,3 +147,5 @@ To inspect the conversion, read `raw_response`, `control_before`, `increments`, 
 Return to the [five-module workflow](full-workflow.md) or inspect the [BEV input guide](bev-state-guide.md).
 
 The optional `api_503_retries` setting (default `0`, maximum `10`) retries a temporary HTTP 503 with the identical request while simulation time is paused. It honors `Retry-After` or uses the configured backoff. The limit applies per decision, including when 429 responses occur between 503 responses; exhausting it fails the rollout.
+
+Map polylines (including navigation) are serialized to millimetre precision to limit input size; raw scene snapshots retain their original precision.
