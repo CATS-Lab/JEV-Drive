@@ -22,6 +22,8 @@ Every decision uses one request containing the same scene state and two named qu
 
 The shared instructions tell JEV to follow the route, stay on drivable roads, avoid collisions and interpret the supplied traffic-control facts. Unknown signal phases remain unknown. JEV also receives measured ego motion, `current_target_speed_mps`, `commanded_steering_rad`, `decision_dt_s` and `vehicle_constraints`. The builders do not select a maneuver in advance.
 
+Prompt version `jev-drive-v1.1` explains that consecutive centerline points follow each lane's travel direction, including on curves; lane left/right is relative to that direction. It prohibits wrong-way driving and requires the entire vehicle footprint to remain inside the drivable roadway. Shared lane boundaries may be crossed only for a safe, legal change to a same-direction lane. Lane edges are distinct from physical road edges: the current input has no separate road-edge map, and the native adapter does not populate marking types (they remain `unknown`). Missing neighbors or ROI clipping endpoints do not prove an outer road edge; unknown markings do not grant crossing permission. When safe continuation is uncertain, JEV is asked to slow or stop. Navigation cannot override these rules. These are textual requirements, not a geometric safety override; existing rollout examples predate this prompt change.
+
 [questions.py](../src/jev_drive/policy/questions.py) constructs the exact instructions and criteria. The questions ask JEV to consider both axes, but their answers are separate judgments against the same state; one answer is not fed into the other question.
 
 ## 2. Default Score mode: a numerical control rubric

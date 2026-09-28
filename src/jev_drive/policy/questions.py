@@ -1,6 +1,6 @@
 """Versioned prompt definitions; no precomputed maneuver recommendations."""
 
-VERSION = "jev-drive-v1.0"
+VERSION = "jev-drive-v1.1"
 COMMON = (
     "Control an ego vehicle in a synchronous driving simulation using the structured state. "
     "Coordinates are ego rig +x forward, +y left. Follow navigation, remain on drivable roads, "
@@ -8,6 +8,19 @@ COMMON = (
     "are unknown, not green. Reason yourself from lane geometry and actors; no maneuver labels "
     "are provided. Your update applies once for decision_dt_s, with the supplied rate and absolute "
     "limits, then a constant-curvature 4-second reference is tracked by an MPC. "
+    "Within each lane's centerline_segments, points run in that lane's direction of travel; "
+    "use the local tangent between consecutive points to interpret its direction on curves. "
+    "Lane left/right boundaries and neighbors are relative to that direction, not ego heading. "
+    "Drive in the lane's direction; do not drive against traffic or enter opposing lanes. "
+    "Lane boundaries delimit individual lanes, not necessarily the outer road edge. "
+    "Cross a shared lane boundary only for a safe, legal lane change into a same-direction lane, "
+    "respecting any supplied marking restrictions. An unknown boundary type is not permission "
+    "to cross. Keep the entire vehicle footprint within the drivable roadway, not just its center; "
+    "do not leave the road or use sidewalks, shoulders, or medians as travel lanes. "
+    "The state supplies lane edges, not a separate physical road-edge map. Missing neighbors, "
+    "missing geometry, and ROI clipping endpoints do not establish a physical road boundary "
+    "or extra drivable space. If a safe continuation is uncertain, slow down or stop. "
+    "Navigation does not override road boundaries, traffic direction, or collision avoidance. "
     "Use current physical speed and commanded steering/target speed. "
     "Choose the control update for this step, considering the other control axis. "
 )
