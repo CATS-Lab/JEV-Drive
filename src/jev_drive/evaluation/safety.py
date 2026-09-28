@@ -9,6 +9,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from shapely.geometry import LineString, Point, Polygon
 from ..state.actor_filter import filter_actors
+from .road_surface import local_surface, GeometryAssessmentError
 
 
 class SafetyViolation(RuntimeError):
@@ -56,7 +57,8 @@ def nearest_segment(points, point):
 
 
 class GeometryChecker:
-    def __init__(self, lanes, road_edges, actor_filter=True):
+    def __init__(self, lanes, road_edges, actor_filter=True, *, align_road_surface=False):
+        self.align_road_surface = align_road_surface
         self.actor_filter = actor_filter
         self.lanes = []
         for lane in lanes:
@@ -85,6 +87,12 @@ class GeometryChecker:
             ego["dimensions_m"],
             ego["box_center_rig_m"],
         )
+        alignment = {"mode": "raw_world_height"}
+        if self.align_road_surface:
+            alignment = local_surface(self.lanes, center, nearest_segment)
+            delta = alignment["surface_z_m"] - z[0]
+            alignment.update(raw_body_bottom_z_m=float(z[0]), height_adjustment_m=float(delta))
+            z = (z[0] + delta, z[1] + delta)
         issues = []
         retained, audit = filter_actors(actors, self.actor_filter)
         for actor in retained:
@@ -147,6 +155,7 @@ class GeometryChecker:
                 }
             )
         return {
+            "height_evaluation": alignment,
             "issues": issues,
             "lane_ids": sorted(str(l["id"]) for l, _ in containing),
             "actor_count_raw": len(actors),
@@ -168,8 +177,10 @@ class SafetyMonitor:
             int(adapter.artifact.rig.trajectory.timestamps_us[0]) + self.dt_us
         )
         self.checker = GeometryChecker(
-            adapter.lanes, adapter.road_edges, adapter.config.actor_overlap_filter
+            adapter.lanes, adapter.road_edges, adapter.config.actor_overlap_filter,
+            align_road_surface=True
         )
+        self.assessment_error = None
         self.failure = None
         self.last_safe_us = self.first_policy_us
         self.samples = 0
@@ -181,7 +192,13 @@ class SafetyMonitor:
         self.logger = None
 
     def inspect(self, snapshot, *, initial=False):
-        result = self.checker.check(snapshot.ego, snapshot.actors)
+        try:
+            result = self.checker.check(snapshot.ego, snapshot.actors)
+        except GeometryAssessmentError as exc:
+            self.assessment_error = {"event": "assessment_failure", "timestamp_us": snapshot.timestamp_us, "error": str(exc)}
+            if self.logger:
+                self.logger.write(self.assessment_error)
+            raise
         result.update(
             event="safety_sample", timestamp_us=snapshot.timestamp_us, initial=initial
         )
@@ -245,6 +262,8 @@ class SafetyMonitor:
             self.steps, max(0, (self.last_safe_us - self.first_policy_us) // self.dt_us)
         )
         return {
+            "evaluation_version": "local_road_surface_v1",
+            "assessment_error": self.assessment_error,
             "safe_steps": safe_steps,
             "safe_time_coverage": safe_steps / self.steps,
             "failure": self.failure,

@@ -7,6 +7,7 @@ from ..policy.questions import VERSION
 import numpy as np
 from .replay import ReplayClient
 from .safety import SafetyMonitor, SafetyViolation
+from .road_surface import GeometryAssessmentError
 
 
 def save(path, value):
@@ -151,6 +152,10 @@ async def run_scene(
     preflight = SafetyMonitor(adapter, steps, config.decision_dt_s)
     try:
         preflight.inspect(snapshot, initial=True)
+    except GeometryAssessmentError:
+        report.update(status="assessment_failed", initial_safety=preflight.report())
+        save(path, report)
+        return report
     except SafetyViolation:
         report.update(
             status="excluded_initial_geometry", initial_safety=preflight.report()
@@ -208,7 +213,7 @@ async def run_scene(
             report["status"] = "completed"
             break
         if monitor.failure is None:
-            report["status"] = "infrastructure_failed"
+            report["status"] = "assessment_failed" if monitor.assessment_error else "infrastructure_failed"
             break
         if not sites.consume(monitor.failure):
             report["status"] = "retry_limit_reached"

@@ -117,6 +117,7 @@ async def run_suite(args):
     for scene in scenes:
         manifest["scenes"].append(
             {
+                "seed_log": scene.get("seed_log"),
                 "tag": scene["tag"],
                 "artifact": scene["artifact"],
                 "status": "queued",
@@ -141,7 +142,7 @@ async def run_suite(args):
             del data
             item["status"] = "running"
             update(suite, manifest)
-            seed = args.seed_log if item["tag"] == args.seed_tag else None
+            seed = item.get("seed_log") or (args.seed_log if item["tag"] == args.seed_tag else None)
             result = await run_scene(
                 item["artifact"], config, out, steps, seed_log=seed
             )

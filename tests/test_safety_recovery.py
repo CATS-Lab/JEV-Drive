@@ -251,3 +251,24 @@ def test_replay_tolerance_keeps_timestamps_exact_and_bounds_numeric_drift():
         assert_same({"ego": {"speed": 10.1}}, {"ego": {"speed": 10.0}})
     with pytest.raises(ReplayDivergence):
         assert_same({"timestamp_us": 1000001}, {"timestamp_us": 1000000})
+
+
+def test_surface_alignment_catches_floating_ego_without_flattening_other_levels():
+    from jev_drive.evaluation.road_surface import GeometryAssessmentError
+    subject = ego()
+    subject['position_world_m'][2] = 5
+    actor = dict(id='car', position_world_m=[1, 0, 1], quaternion_xyzw=[0, 0, 0, 1], dimensions_m=[4, 2, 2], source_type='automobile', velocity_world_mps=[5, 0, 0])
+    original = copy.deepcopy(subject)
+    checker = GeometryChecker([lane()], [], align_road_surface=True)
+    assert checker.check(subject, [actor])['issues'][0]['type'] == 'collision'
+    assert subject == original
+    actor['position_world_m'][2] = 6
+    assert not checker.check(subject, [actor])['issues']
+    bridge = lane()
+    bridge['id'] = 'bridge'
+    for key in ['center_world', 'left_edge_world', 'right_edge_world']:
+        for p in bridge[key]: p[2] = 6
+    with pytest.raises(GeometryAssessmentError, match='stacked'):
+        GeometryChecker([lane(), bridge], [], align_road_surface=True).check(subject, [])
+    with pytest.raises(GeometryAssessmentError, match='No source'):
+        checker.check(ego(y=20), [])

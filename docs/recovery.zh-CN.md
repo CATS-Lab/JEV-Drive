@@ -37,3 +37,9 @@ scripts/jev-drive --config configs/default.json retry-scene \
 每次尝试保留决策、回答来源、采样检查、控制器轨迹和原生日志。使用 `scripts/render-scene-previews.py --run <attempt-directory> --artifact "$JEV_ARTIFACT"` 生成全景和车道 GIF。半透明灰色区域标出该次决策实际提供给 JEV 的道路级导航车道，两图显示同一份导航；表示导航区域，不是精确目标轨迹。末端失败帧沿用最后一次决策的导航。全景为 GT 在上、JEV 在下；可用时纳入检测到失败的末端姿态。不要将失败分支拼接成一条成功轨迹。
 
 多个固定场景可以在已配置的 Python/AlpaSim 环境中运行 `python -m jev_drive.evaluation.suite --manifest scenes.json --config configs/default.json --output outputs/recovery-suite --render-script scripts/render-scene-previews.py`。清单格式为 `{"scenes":[{"tag":"example","artifact":"/absolute/path/scene.usdz"}]}`。每个场景结束后更新双语索引和汇总指标，尚未完成的场景明确列出，不算作通过。
+
+### 未启用贴地时的高度处理
+
+原生结构化状态测试未启用贴地，自车积分高度可能偏离源道路表面，直接比较三维框高度会漏检道路上重叠的目标。`local_road_surface_v1` 评估仅将自车框底面对齐到最近源车道多边形的中心线高度中位数（搜索距离 2 米，距离并列容差 0.05 米）。其他目标保持源高度；控制、物理轨迹和 JEV 输入不变。候选高度相差超过 1.5 米，或没有附近车道路面时，记录 `assessment_failed` 并停止评估，不算通过或驾驶违规。每次采样记录高度修正及源车道 ID。这是路面对齐的采样占用检查，不是贴地物理仿真的碰撞保证。
+
+场景清单可逐场景指定 `seed_log`。复用前检查完整状态和当前提示词版本，仅新分支决策调用 API，因此评估器修订可以重查已有回答而不重复产生这些回答的 API 费用。
